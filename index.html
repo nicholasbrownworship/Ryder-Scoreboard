@@ -13,29 +13,26 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#132022 0%,#0b0f0d 45%,#0b0f0d 100%);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    .app{display:grid;grid-template-columns:320px 1fr 380px;gap:16px;height:100%;padding:16px}
+    .app{display:grid;grid-template-columns:320px 1fr 420px;gap:16px;height:100%;padding:16px}
     header{grid-column:1/-1;background:linear-gradient(180deg,#0e1516,#0a0e0f);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:0 6px 20px var(--shadow);display:flex;align-items:center;gap:12px}
     h1{margin:0;font-size:20px;letter-spacing:.3px}
     .badge{padding:.2rem .5rem;border:1px solid var(--line);border-radius:999px;color:var(--accent-2);font-size:12px}
 
-    /* Panels */
     .panel{background:linear-gradient(180deg,#101617,#0e1314);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:0}
     .panel .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);background:#0c1111}
     .panel .head h2{font-size:14px;letter-spacing:.4px;margin:0;color:#cfe6e8;text-transform:uppercase}
     .panel .body{padding:12px;overflow:auto}
 
-    /* Controls */
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .row + .row{margin-top:8px}
     label{font-size:12px;color:var(--hint)}
-    input[type="text"], input[type="number"], select, textarea{background:#0e1415;border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:10px;outline:none}
-    input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus{border-color:#2d4b4f;box-shadow:0 0 0 3px #2d4b4f44}
+    input[type="text"], input[type="number"], select{background:#0e1415;border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:10px;outline:none}
+    input:focus, select:focus{border-color:#2d4b4f;box-shadow:0 0 0 3px #2d4b4f44}
     .btn{background:#132325;border:1px solid #234246;color:var(--text);padding:8px 12px;border-radius:12px;cursor:pointer}
     .btn:hover{filter:brightness(1.1)}
     .btn.primary{background:#17393d;border-color:#2a6f77;color:#c9fbff}
     .btn.warn{background:#3d1717;border-color:#772a2a;color:#ffd6d6}
 
-    /* Player Pool */
     .pool{display:flex;flex-direction:column;gap:10px}
     .pool-controls{display:flex;gap:8px;flex-wrap:wrap}
     .pill{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#101717;color:#bfe7ea;font-size:12px;cursor:pointer;user-select:none}
@@ -48,9 +45,9 @@
     .dot.valley{background:#3498db}
     .meta{font-size:12px;color:#a7b1b2}
 
-    /* Builder */
     .builder-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
     .tabs{display:flex;gap:6px}
+    .tabs.segment{background:#0e1415;padding:4px;border:1px solid var(--line);border-radius:999px}
     .tab{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#0f1617;color:#bfe7ea;font-size:12px;cursor:pointer}
     .tab.active{background:#17393d;border-color:#2a6f77;color:#dcffff}
 
@@ -70,33 +67,26 @@
     .legend{display:flex;gap:10px;align-items:center;font-size:12px;color:#a7b1b2}
     .legend .swatch{width:10px;height:10px;border-radius:50%}
 
-    /* Sidebar */
     .side .body{display:flex;flex-direction:column;gap:10px}
     .list{background:#0d1314;border:1px solid var(--line);border-radius:12px;overflow:auto}
     .list table{width:100%;border-collapse:collapse;font-size:12px}
     .list th,.list td{padding:8px;border-bottom:1px solid #1b2a2c}
     .list th{text-align:left;color:#b6cacc;position:sticky;top:0;background:#0f1516}
 
-    /* Print */
     @media print{
       body{background:#fff;color:#000}
       header,.panel:not(.printable){display:none}
       .printable{display:block;border:none;box-shadow:none}
     }
 
-    /* Leaderboard / schedule polish */
+    /* Leaderboard polish */
     body, table { font-variant-numeric: tabular-nums; }
     header { border-radius: 16px; border-top: 2px solid #2b3b3e; box-shadow: 0 12px 40px var(--shadow), inset 0 1px 0 #1a2324; }
     header h1 { letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
-    header .badge { background: linear-gradient(180deg,#0f1718,#0a0f10); border-color:#2a3b3e; color:#cfe6e8; box-shadow: inset 0 0 0 1px #0a0f10, 0 6px 18px rgba(0,0,0,.35); }
-    .player { background: linear-gradient(180deg,#0f1516,#0d1314); border-color:#1c2a2c; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-    .tabs { background:#0e1415; padding:4px; border:1px solid #223033; border-radius:999px; }
-    .tab { background:transparent; border-color:transparent; color:#a8c6c9; }
-    .tab.active { background:#17393d; border-color:#2a6f77; color:#dcffff; box-shadow: 0 2px 10px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.03); }
-    .list { border-color:#203135; box-shadow: 0 10px 26px rgba(0,0,0,.35); }
+    header .badge { background: linear-gradient(180deg,#0f1718,#0a0e10); border-color:#2a3b3e; color:#cfe6e8; box-shadow: inset 0 0 0 1px #0a0e10, 0 6px 18px rgba(0,0,0,.35); }
     .list tbody tr:nth-child(odd){ background: linear-gradient(180deg, #0b1112, #0a0f10); }
     .list tbody tr:hover{ background:#101a1b; }
-    .list td:nth-child(3), .list td:nth-child(4){ text-align:center; font-weight:700; }
+    .list td:nth-child(3), .list td:nth-child(4), .list td:nth-child(5), .list td:nth-child(6){ text-align:center; font-weight:700; }
   </style>
 </head>
 <body>
@@ -142,24 +132,32 @@
             <label>Event</label>
             <input id="eventName" type="text" placeholder="Ozark Invitational 2026" />
           </div>
+
           <div class="row">
-            <label>Date</label>
-            <input id="eventDate" type="text" placeholder="2026-06-20" />
+            <label>Date (Day 1)</label>
+            <input id="eventDate1" type="text" placeholder="2026-06-20" />
           </div>
           <div class="row">
-            <label>Groups</label>
+            <label>Date (Day 2)</label>
+            <input id="eventDate2" type="text" placeholder="2026-06-21" />
+          </div>
+
+          <div class="row">
+            <label>Groups (both days)</label>
             <input id="numGroups" type="number" min="1" max="12" value="6" />
-          </div>
-          <div class="row">
-            <label>Players per group</label>
-            <select id="groupSize"><option value="2">2</option><option value="4" selected>4</option></select>
           </div>
         </div>
 
         <div class="row" style="justify-content:space-between;margin:8px 0 12px">
-          <div class="tabs" id="tabs">
-            <button class="tab active" data-side="front">Front 9</button>
-            <button class="tab" data-side="back">Back 9</button>
+          <div class="row" style="gap:10px;align-items:center">
+            <div class="tabs segment" id="dayTabs">
+              <button class="tab active" data-day="day1">Day 1</button>
+              <button class="tab" data-day="day2">Day 2</button>
+            </div>
+            <div class="tabs segment" id="tabs">
+              <button class="tab active" data-side="front">Front 9</button>
+              <button class="tab" data-side="back">Back 9</button>
+            </div>
           </div>
           <div class="row">
             <label>Format</label>
@@ -183,7 +181,7 @@
       <div class="head"><h2>Leaderboard &amp; Schedule</h2></div>
       <div class="body">
         <div class="row">
-          <div class="pill" id="pillOnce">Validate: each player used once/side</div>
+          <div class="pill" id="pillOnce">Validate: each player used once per side</div>
           <div class="pill" id="pillBalance">Validate: team composition</div>
         </div>
         <div id="alerts"></div>
@@ -191,7 +189,14 @@
         <div class="list" aria-label="Assignments table">
           <table>
             <thead>
-              <tr><th style="width:40%">Player</th><th>Team</th><th>Front</th><th>Back</th></tr>
+              <tr>
+                <th style="width:36%">Player</th>
+                <th>Team</th>
+                <th>Front D1</th>
+                <th>Back D1</th>
+                <th>Front D2</th>
+                <th>Back D2</th>
+              </tr>
             </thead>
             <tbody id="assignmentTable"></tbody>
           </table>
@@ -210,20 +215,27 @@
      *  0) DATA & STORAGE LAYER
      *********************************/
     const SIGNUPS_KEY = "ozarkSignups_v1";
-    const STORAGE_KEY = "ozarkPairings_v2";
+    const STORAGE_KEY = "ozarkPairings_v3_twoDays";
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
+    const TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
 
-    /** Player shape: {id, firstName, lastName, nickname?, team: 'ozark'|'valley', email?, phone?} */
+    // State now includes two days
     let state = {
       players: [],
       filters: { team: "all", q: "" },
-      side: "front",
+      currentDay: "day1", // 'day1' | 'day2'
+      side: "front",      // 'front' | 'back'
       eventName: "Ozark Invitational 2026",
-      eventDate: "2026-06-20",
-      format: { front: "Best Ball", back: "Scramble" },
-      groups: { front: [], back: [] }, // per side: array of groups -> array of playerIds
-      groupSize: 4,                     // will be auto-set by format (4 for team formats, 2 for singles)
+      dates: { day1: "2026-06-20", day2: "2026-06-21" },
+      format: {
+        day1: { front: "Best Ball", back: "Scramble" },
+        day2: { front: "Alt Shot",  back: "Singles"  }
+      },
+      groups: {
+        day1: { front: [], back: [] }, // array of groups -> array of player ids
+        day2: { front: [], back: [] }
+      },
       numGroups: 6
     };
 
@@ -288,7 +300,7 @@
       const q = (state.filters.q||'').toLowerCase();
       const team = state.filters.team;
       elPlayers.innerHTML = '';
-      const used = new Set((state.groups[state.side]||[]).flat());
+      const used = new Set((state.groups[state.currentDay][state.side]||[]).flat());
       state.players
         .filter(p => team==='all' || p.team===team)
         .filter(p => playerDisplayName(p).toLowerCase().includes(q))
@@ -338,55 +350,51 @@
     }
 
     /*********************************
-     *  2) BUILDER GRID (2v2 teams; singles 1v1)
+     *  2) BUILDER GRID (Per Day + Side)
      *********************************/
-    const elGrid = document.getElementById('grid');
-    const elTabs = document.getElementById('tabs');
+    const elGrid   = document.getElementById('grid');
+    const elTabs   = document.getElementById('tabs');
+    const elDayTabs= document.getElementById('dayTabs');
     const elFormat = document.getElementById('formatSelect');
-    const elGroupSize = document.getElementById('groupSize');
 
-    const TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
-
-    function setGroupSizeForCurrentFormat(){
-      const side = state.side;
-      const fmt = state.format[side];
-      const desired = TEAM_FORMATS.has(fmt) ? 4 : 2;
-      state.groupSize = desired;
-      // reflect & lock UI
-      elGroupSize.value = String(desired);
-      elGroupSize.disabled = true;
-      initGroupsIfNeeded();
-    }
+    function desiredGroupSize(fmt){ return TEAM_FORMATS.has(fmt) ? 4 : 2; }
 
     function initGroupsIfNeeded(){
-      ['front','back'].forEach(side=>{
-        if(!Array.isArray(state.groups[side])) state.groups[side] = [];
-        // ensure numGroups and groupSize shape
-        if(state.groups[side].length !== state.numGroups){
-          state.groups[side] = Array.from({length: state.numGroups}, (_,i)=> (state.groups[side][i]||[]).slice(0,state.groupSize));
-        }
-        state.groups[side] = state.groups[side].map(g=>{
-          const arr = g.slice(0, state.groupSize);
-          while (arr.length < state.groupSize) arr.push(null);
-          return arr;
+      ['day1','day2'].forEach(day=>{
+        ['front','back'].forEach(side=>{
+          if(!Array.isArray(state.groups[day][side])) state.groups[day][side] = [];
+          // ensure numGroups
+          if(state.groups[day][side].length !== state.numGroups){
+            state.groups[day][side] = Array.from({length: state.numGroups}, (_,i)=> (state.groups[day][side][i]||[]));
+          }
+          // ensure group arrays sized for current format
+          const fmt = state.format[day][side];
+          const gs = desiredGroupSize(fmt);
+          state.groups[day][side] = state.groups[day][side].map(g=>{
+            const arr = g.slice(0, gs);
+            while (arr.length < gs) arr.push(null);
+            return arr;
+          });
         });
       });
     }
 
     function renderGrid(){
-      setGroupSizeForCurrentFormat();
+      initGroupsIfNeeded();
       elGrid.innerHTML = '';
+      const day = state.currentDay;
       const side = state.side;
-      const fmt = state.format[side];
+      const fmt = state.format[day][side];
       const isTeam = TEAM_FORMATS.has(fmt);
 
-      state.groups[side].forEach((group, idx)=>{
+      state.groups[day][side].forEach((group, idx)=>{
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = `<h3>Group ${idx+1} • ${fmt}</h3>`;
+        const dayLabel = day==='day1' ? 'Day 1' : 'Day 2';
+        card.innerHTML = `<h3>${dayLabel} • ${side==='front'?'Front 9':'Back 9'} • ${fmt}</h3>`;
 
-        const sub = document.createElement('div');
         if(isTeam){
+          const sub = document.createElement('div');
           sub.className = 'subheads';
           sub.innerHTML = `<span>Team A</span><span>Team B</span>`;
           card.appendChild(sub);
@@ -398,29 +406,29 @@
         if(isTeam){
           const colA = document.createElement('div'); colA.className = 'col';
           const colB = document.createElement('div'); colB.className = 'col';
-
-          for(let i=0;i<2;i++){
-            colA.appendChild(buildSlot(idx, i, group[i]));
-          }
-          for(let i=2;i<4;i++){
-            colB.appendChild(buildSlot(idx, i, group[i]));
-          }
+          colA.appendChild(buildSlot(day, side, idx, 0, group[0]));
+          colA.appendChild(buildSlot(day, side, idx, 1, group[1]));
+          colB.appendChild(buildSlot(day, side, idx, 2, group[2]));
+          colB.appendChild(buildSlot(day, side, idx, 3, group[3]));
           slotsWrap.appendChild(colA);
           slotsWrap.appendChild(colB);
         }else{
-          for(let i=0;i<2;i++){
-            slotsWrap.appendChild(buildSlot(idx, i, group[i]));
-          }
+          slotsWrap.appendChild(buildSlot(day, side, idx, 0, group[0]));
+          slotsWrap.appendChild(buildSlot(day, side, idx, 1, group[1]));
         }
 
         card.appendChild(slotsWrap);
         elGrid.appendChild(card);
       });
+      // reflect format control for current day/side
+      elFormat.value = fmt;
     }
 
-    function buildSlot(groupIndex, pos, playerId){
+    function buildSlot(day, side, groupIndex, pos, playerId){
       const s = document.createElement('div');
       s.className = 'slot'+(playerId? ' filled':'');
+      s.dataset.day = day;
+      s.dataset.side = side;
       s.dataset.group = groupIndex;
       s.dataset.pos = pos;
       s.textContent = playerId ? playerDisplayName(findPlayer(playerId)) : 'Drop player here';
@@ -428,9 +436,8 @@
       s.addEventListener('dragleave', ()=> s.classList.remove('dragover'));
       s.addEventListener('drop', e=> onDropToSlot(e, s));
       s.addEventListener('click', ()=> {
-        const side = state.side;
-        if(state.groups[side][groupIndex][pos]){
-          state.groups[side][groupIndex][pos] = null;
+        if(state.groups[day][side][groupIndex][pos]){
+          state.groups[day][side][groupIndex][pos] = null;
           save(); renderAll();
         }
       });
@@ -445,14 +452,14 @@
       e.preventDefault(); slot.classList.remove('dragover');
       const playerId = e.dataTransfer.getData('text/player');
       if(!playerId) return;
-      assignPlayerToSlot(playerId, Number(slot.dataset.group), Number(slot.dataset.pos));
+      assignPlayerToSlot(slot.dataset.day, slot.dataset.side, Number(slot.dataset.group), Number(slot.dataset.pos), playerId);
     }
 
-    function assignPlayerToSlot(playerId, groupIndex, pos){
-      const side = state.side; initGroupsIfNeeded();
-      // remove any existing placement on this side
-      for(const g of state.groups[side]){ for(let i=0;i<g.length;i++){ if(g[i]===playerId){ g[i]=null; } } }
-      state.groups[side][groupIndex][pos] = playerId;
+    function assignPlayerToSlot(day, side, groupIndex, pos, playerId){
+      initGroupsIfNeeded();
+      // remove any existing placement for this player on this day+side
+      for(const g of state.groups[day][side]){ for(let i=0;i<g.length;i++){ if(g[i]===playerId){ g[i]=null; } } }
+      state.groups[day][side][groupIndex][pos] = playerId;
       save(); renderAll();
     }
 
@@ -460,31 +467,46 @@
 
     // Controls
     document.getElementById('eventName').addEventListener('input', e=>{ state.eventName = e.target.value; save(); });
-    document.getElementById('eventDate').addEventListener('input', e=>{ state.eventDate = e.target.value; save(); });
-    document.getElementById('numGroups').addEventListener('input', e=>{ state.numGroups = Math.max(1, Math.min(12, Number(e.target.value)||1)); initGroupsIfNeeded(); renderAll(); save(); });
+    document.getElementById('eventDate1').addEventListener('input', e=>{ state.dates.day1 = e.target.value; save(); });
+    document.getElementById('eventDate2').addEventListener('input', e=>{ state.dates.day2 = e.target.value; save(); });
+    document.getElementById('numGroups').addEventListener('input', e=>{
+      state.numGroups = Math.max(1, Math.min(12, Number(e.target.value)||1));
+      initGroupsIfNeeded(); renderAll(); save();
+    });
 
-    // groupSize is auto-managed; keep UI disabled
-    document.getElementById('groupSize').addEventListener('change', e=>{
-      // ignore manual changes; we always enforce by format
-      setGroupSizeForCurrentFormat(); renderAll(); save();
+    elDayTabs.addEventListener('click', (e)=>{
+      const t = e.target.closest('.tab'); if(!t) return;
+      document.querySelectorAll('#dayTabs .tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      state.currentDay = t.dataset.day;
+      save(); renderAll();
     });
 
     elTabs.addEventListener('click', (e)=>{
       const t = e.target.closest('.tab'); if(!t) return;
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('active'));
       t.classList.add('active');
-      state.side = t.dataset.side;
-      setGroupSizeForCurrentFormat(); save(); renderAll();
+      state.side = t.dataset.side; save(); renderAll();
     });
 
     elFormat.addEventListener('change', (e)=>{
-      state.format[state.side] = e.target.value;
-      setGroupSizeForCurrentFormat(); save(); renderAll();
+      state.format[state.currentDay][state.side] = e.target.value;
+      // adjust group lengths for this side/day to match format size
+      const gs = desiredGroupSize(e.target.value);
+      state.groups[state.currentDay][state.side] =
+        state.groups[state.currentDay][state.side].map(g=>{
+          const a = g.slice(0, gs);
+          while (a.length < gs) a.push(null);
+          return a;
+        });
+      save(); renderAll();
     });
 
     document.getElementById('btnClearSide').addEventListener('click', ()=>{
-      if(confirm('Clear all groups on the '+state.side+'?')){
-        state.groups[state.side] = Array.from({length: state.numGroups}, ()=> Array(state.groupSize).fill(null));
+      const day = state.currentDay, side = state.side;
+      if(confirm(`Clear all groups on ${day==='day1'?'Day 1':'Day 2'} ${side==='front'?'Front 9':'Back 9'}?`)){
+        const gs = desiredGroupSize(state.format[day][side]);
+        state.groups[day][side] = Array.from({length: state.numGroups}, ()=> Array(gs).fill(null));
         save(); renderAll();
       }
     });
@@ -496,54 +518,70 @@
     const elAssignTable = document.getElementById('assignmentTable');
 
     function renderAssignmentsTable(){
-      const usedFront = new Map();
-      const usedBack  = new Map();
-      (state.groups.front||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) usedFront.set(pid, i+1) }))
-      (state.groups.back||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) usedBack.set(pid, i+1) }))
+      const used = {
+        day1: { front:new Map(), back:new Map() },
+        day2: { front:new Map(), back:new Map() },
+      };
+      (state.groups.day1.front||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day1.front.set(pid, i+1) }))
+      (state.groups.day1.back ||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day1.back.set(pid, i+1) }))
+      (state.groups.day2.front||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day2.front.set(pid, i+1) }))
+      (state.groups.day2.back ||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day2.back.set(pid, i+1) }))
+
       const rows = state.players.map(p=>{
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${playerDisplayName(p)}</td><td>${TEAM_LABELS[p.team]}</td><td>${usedFront.get(p.id)||''}</td><td>${usedBack.get(p.id)||''}</td>`;
+        tr.innerHTML =
+          `<td>${playerDisplayName(p)}</td><td>${TEAM_LABELS[p.team]}</td>`+
+          `<td>${used.day1.front.get(p.id)||''}</td>`+
+          `<td>${used.day1.back.get(p.id)||''}</td>`+
+          `<td>${used.day2.front.get(p.id)||''}</td>`+
+          `<td>${used.day2.back.get(p.id)||''}</td>`;
         return tr;
       });
       elAssignTable.innerHTML = ''; rows.forEach(r=> elAssignTable.appendChild(r));
 
-      // Alerts
       const problems = [];
-      // Once per side
-      state.players.forEach(p=>{
-        const f = usedFront.has(p.id); const b = usedBack.has(p.id);
-        if(!f) problems.push(`Front: ${playerDisplayName(p)} not placed`);
-        if(!b) problems.push(`Back: ${playerDisplayName(p)} not placed`);
+
+      // once per side per day
+      ['day1','day2'].forEach(day=>{
+        const label = day==='day1'?'Day 1':'Day 2';
+        state.players.forEach(p=>{
+          if(!used[day].front.has(p.id)) problems.push(`${label} Front: ${playerDisplayName(p)} not placed`);
+          if(!used[day].back.has(p.id))  problems.push(`${label} Back: ${playerDisplayName(p)} not placed`);
+        });
       });
 
-      // Composition checks
-      ['front','back'].forEach(side=>{
-        const fmt = state.format[side];
-        const isTeam = TEAM_FORMATS.has(fmt);
-        (state.groups[side]||[]).forEach((g,i)=>{
-          const players = g.filter(Boolean).map(findPlayer);
-          if(isTeam){
-            if(players.length > 0){
-              const oz = players.filter(p=>p.team==='ozark').length;
-              const va = players.filter(p=>p.team==='valley').length;
-              if(players.length !== 4) problems.push(`${cap(side)} Group ${i+1}: incomplete (needs 4 players: 2v2)`);
-              else if(!(oz===2 && va===2)) problems.push(`${cap(side)} Group ${i+1}: must be 2 from Ozark and 2 from Valley (now ${oz} OZ / ${va} VA)`);
+      // composition checks
+      ['day1','day2'].forEach(day=>{
+        ['front','back'].forEach(side=>{
+          const fmt = state.format[day][side];
+          const isTeam = TEAM_FORMATS.has(fmt);
+          (state.groups[day][side]||[]).forEach((g,i)=>{
+            const players = g.filter(Boolean).map(findPlayer);
+            if(isTeam){
+              if(players.length>0){
+                const oz = players.filter(p=>p.team==='ozark').length;
+                const va = players.filter(p=>p.team==='valley').length;
+                if(players.length !== 4) problems.push(`${printSide(day,side)} Group ${i+1}: incomplete (needs 4 players: 2v2)`);
+                else if(!(oz===2 && va===2)) problems.push(`${printSide(day,side)} Group ${i+1}: must be 2 OZ + 2 VA (now ${oz}/${va})`);
+              }
+            }else{
+              if(players.length>0 && players.length!==2) problems.push(`${printSide(day,side)} Group ${i+1}: singles must be 1v1 (2 players)`);
             }
-          }else{ // singles
-            if(players.length>0 && players.length!==2) problems.push(`${cap(side)} Group ${i+1}: singles must be 1v1 (2 players)`);
-          }
+          });
         });
       });
 
       elAlerts.innerHTML = problems.length
         ? `<div class="card" style="border-color:#4d2626;background:#171112"><strong style="color:#ffb3b3">Needs attention</strong><ul style="margin:.3rem 0 .2rem .9rem">${problems.map(p=>`<li>${p}</li>`).join('')}</ul></div>`
-        : `<div class="card" style="border-color:#244a3c;background:#0f1513"><strong style="color:#b9fbd2">Looks good</strong><div>Everyone is placed with correct pair sizes.</div></div>`;
+        : `<div class="card" style="border-color:#244a3c;background:#0f1513"><strong style="color:#b9fbd2">Looks good</strong><div>Everyone is placed with correct pair sizes on both days.</div></div>`;
     }
 
-    function cap(s){return s[0].toUpperCase()+s.slice(1)}
+    function printSide(day,side){
+      return `${day==='day1'?'Day 1':'Day 2'} ${side==='front'?'Front 9':'Back 9'}`;
+    }
 
-    document.getElementById('pillOnce').addEventListener('click', ()=> alert('One placement per player per side is enforced automatically.'));
-    document.getElementById('pillBalance').addEventListener('click', ()=> alert('Team events require 2v2 (two Ozark and two Valley per group). Singles require 1v1.'));
+    document.getElementById('pillOnce').addEventListener('click', ()=> alert('One placement per player per side per day is enforced when you drop a player again.'));
+    document.getElementById('pillBalance').addEventListener('click', ()=> alert('Team events require 2v2 (2 Ozark + 2 Valley). Singles requires 1v1.'));
 
     /*********************************
      *  4) PRINT / EXPORT
@@ -568,30 +606,37 @@
           .teams .box{border:1px solid #bbb;padding:6px;border-radius:6px}
           .muted{color:#555}
         </style>`;
-      const sideBlock = (side)=>{
-        const fmt = state.format[side];
-        const isTeam = TEAM_FORMATS.has(fmt);
-        const rows = (state.groups[side]||[]).map((g,i)=>{
-          if(isTeam){
-            const a = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
-            const b = g.slice(2,4).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
-            return `<tr><td>${i+1}</td><td>${fmt}</td><td><div class="teams"><div class="box"><strong>Team A</strong><br/>${a}</div><div class="box"><strong>Team B</strong><br/>${b}</div></div></td></tr>`;
-          }else{
-            const names = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
-            return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names}</td></tr>`;
-          }
-        }).join('');
-        return `<div class="sheet"><h2>${side==='front'?'Front 9':'Back 9'} • ${fmt}</h2><table><thead><tr><th>#</th><th>Format</th><th>Players</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
+      const dayBlock = (day)=>{
+        const date = state.dates[day] || '';
+        const title = (day==='day1'?'Day 1':'Day 2') + (date ? ` • ${date}` : '');
+        const sideBlock = (side)=>{
+          const fmt = state.format[day][side];
+          const isTeam = TEAM_FORMATS.has(fmt);
+          const rows = (state.groups[day][side]||[]).map((g,i)=>{
+            if(isTeam){
+              const a = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
+              const b = g.slice(2,4).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
+              return `<tr><td>${i+1}</td><td>${fmt}</td><td><div class="teams"><div class="box"><strong>Team A</strong><br/>${a}</div><div class="box"><strong>Team B</strong><br/>${b}</div></div></td></tr>`;
+            }else{
+              const names = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
+              return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names}</td></tr>`;
+            }
+          }).join('');
+          return `<div class="sheet"><h2>${side==='front'?'Front 9':'Back 9'} • ${fmt}</h2><table><thead><tr><th>#</th><th>Format</th><th>Players</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        };
+        return `<div class="sheet"><h2>${title}</h2></div>${sideBlock('front')}${sideBlock('back')}`;
       };
+
       elPrintContent.innerHTML = css +
-        `<h1 style="margin:0 0 6px">${state.eventName}</h1><div style="margin:0 0 10px;color:#333">${state.eventDate}</div>` +
-        `<div class="twocol">${sideBlock('front')}${sideBlock('back')}</div>`;
+        `<h1 style="margin:0 0 6px">${state.eventName}</h1>` +
+        `<div class="twocol">${dayBlock('day1')}${dayBlock('day2')}</div>`;
       elPrintArea.style.display = 'block';
     }
 
     document.getElementById('btnExport').addEventListener('click', ()=>{
       const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ozark_pairings.json'; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ozark_pairings_twodays.json'; a.click();
     });
 
     /*********************************
@@ -602,13 +647,7 @@
       const first = n.firstName || (n.name ? n.name.split(' ')[0] : '');
       const last  = n.lastName  || (n.name ? n.name.split(' ').slice(1).join(' ') : '');
       const team  = (n.team || '').toLowerCase().includes('val') ? 'valley' : 'ozark';
-      return {
-        id, firstName:first||'', lastName:last||'',
-        nickname: n.nickname || '',
-        team,
-        email: n.email || '',
-        phone: n.phone || ''
-      };
+      return { id, firstName:first||'', lastName:last||'', nickname: n.nickname || '', team, email: n.email || '', phone: n.phone || '' };
     }
 
     function mergeIntoPlayers(incomingArray) {
@@ -624,11 +663,9 @@
       save(); renderAll();
     }
 
-    // Import Players (merge) from JSON
     document.getElementById('btnImportPlayers').addEventListener('click', () => {
       const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.accept = '.json,application/json';
+      inp.type = 'file'; inp.accept = '.json,application/json';
       inp.onchange = () => {
         const f = inp.files?.[0]; if (!f) return;
         const r = new FileReader();
@@ -639,21 +676,17 @@
             if (!arr) { alert('JSON should be an array of players or { "players": [...] }'); return; }
             mergeIntoPlayers(arr);
             alert('Players merged successfully.');
-          } catch {
-            alert('Could not parse JSON.');
-          }
+          } catch { alert('Could not parse JSON.'); }
         };
         r.readAsText(f);
       };
       inp.click();
     });
 
-    // Import State (replace)
     document.getElementById('btnImportState').addEventListener('click', () => {
       if (!confirm('This will REPLACE your current event, players, and groups. Continue?')) return;
       const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.accept = '.json,application/json';
+      inp.type = 'file'; inp.accept = '.json,application/json';
       inp.onchange = () => {
         const f = inp.files?.[0]; if (!f) return;
         const r = new FileReader();
@@ -665,35 +698,33 @@
             state = Object.assign({
               players: [],
               filters: { team: 'all', q: '' },
+              currentDay: 'day1',
               side: 'front',
               eventName: state.eventName,
-              eventDate: state.eventDate,
-              format: { front: 'Best Ball', back: 'Scramble' },
-              groups: { front: [], back: [] },
-              groupSize: 4,
+              dates: { day1: state.dates.day1, day2: state.dates.day2 },
+              format: { day1:{front:'Best Ball',back:'Scramble'}, day2:{front:'Alt Shot',back:'Singles'} },
+              groups: { day1:{front:[],back:[]}, day2:{front:[],back:[]} },
               numGroups: 6
             }, obj);
+            initGroupsIfNeeded();
             save(); renderAll();
             alert('State imported and replaced.');
-          } catch {
-            alert('Could not parse state JSON.');
-          }
+          } catch { alert('Could not parse state JSON.'); }
         };
         r.readAsText(f);
       };
       inp.click();
     });
 
-    /* ===== CSV PARSER + CSV IMPORT (players merge) ===== */
     function parseCSV(text) {
-      if (text && text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+      if (text && text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
       const rows = [];
       let i = 0, cur = '', row = [], inQuotes = false;
       while (i < text.length) {
         const c = text[i];
         if (inQuotes) {
           if (c === '"') {
-            if (text[i+1] === '"') { cur += '"'; i += 2; continue; } // escaped quote
+            if (text[i+1] === '"') { cur += '"'; i += 2; continue; }
             inQuotes = false; i++; continue;
           } else { cur += c; i++; continue; }
         }
@@ -713,7 +744,6 @@
       if (!rows.length) return [];
       const header = rows[0].map(h => h.trim().toLowerCase());
       const idx = name => header.indexOf(name);
-      const iId    = idx('id');
       const iFirst = idx('firstname');
       const iLast  = idx('lastname');
       const iName  = idx('name');
@@ -754,9 +784,7 @@
             if (!players.length) { alert('No players found in CSV.'); return; }
             mergeIntoPlayers(players);
             alert(`Imported ${players.length} players from CSV.`);
-          } catch {
-            alert('Could not parse CSV.');
-          }
+          } catch { alert('Could not parse CSV.'); }
         };
         r.readAsText(f);
       };
@@ -768,14 +796,19 @@
      *********************************/
     function hydrateControls(){
       document.getElementById('eventName').value = state.eventName||'';
-      document.getElementById('eventDate').value = state.eventDate||'';
+      document.getElementById('eventDate1').value = state.dates.day1||'';
+      document.getElementById('eventDate2').value = state.dates.day2||'';
       document.getElementById('numGroups').value = state.numGroups||6;
-      setGroupSizeForCurrentFormat();
-      document.getElementById('groupSize').value = state.groupSize||4;
-      document.getElementById('formatSelect').value = state.format[state.side] || 'Best Ball';
-      document.querySelectorAll('.tab').forEach(x=>{
+
+      document.querySelectorAll('#dayTabs .tab').forEach(x=>{
+        x.classList.toggle('active', x.dataset.day===state.currentDay);
+      });
+      document.querySelectorAll('#tabs .tab').forEach(x=>{
         x.classList.toggle('active', x.dataset.side===state.side);
       });
+
+      // reflect current format.
+      elFormat.value = state.format[state.currentDay][state.side] || 'Best Ball';
     }
 
     function renderAll(){
