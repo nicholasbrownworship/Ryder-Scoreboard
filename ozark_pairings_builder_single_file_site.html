@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ozark Pairings Builder</title>
+  <style>
+    :root{
+      --bg:#0b0f0d; --panel:#111617; --muted:#1b2526; --accent:#8bd3dd; --accent-2:#b7e4c7;
+      --text:#e7f2f3; --hint:#99a4a6; --danger:#ff6b6b; --ok:#63e6be; --gold:#f1c40f;
+      --card:#0f1415; --ink:#0b0f0d; --line:#223033; --shadow:rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#132022 0%,#0b0f0d 45%,#0b0f0d 100%);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .app{display:grid;grid-template-columns:320px 1fr 380px;gap:16px;height:100%;padding:16px}
+    header{grid-column:1/-1;background:linear-gradient(180deg,#0e1516,#0a0e0f);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:0 6px 20px var(--shadow);display:flex;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px;letter-spacing:.3px}
+    .badge{padding:.2rem .5rem;border:1px solid var(--line);border-radius:999px;color:var(--accent-2);font-size:12px}
+
+    /* Panels */
+    .panel{background:linear-gradient(180deg,#101617,#0e1314);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:0}
+    .panel .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);background:#0c1111}
+    .panel .head h2{font-size:14px;letter-spacing:.4px;margin:0;color:#cfe6e8;text-transform:uppercase}
+    .panel .body{padding:12px;overflow:auto}
+
+    /* Controls */
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .row + .row{margin-top:8px}
+    label{font-size:12px;color:var(--hint)}
+    input[type="text"], input[type="number"], select, textarea{background:#0e1415;border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:10px;outline:none}
+    input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus{border-color:#2d4b4f;box-shadow:0 0 0 3px #2d4b4f44}
+    .btn{background:#132325;border:1px solid #234246;color:var(--text);padding:8px 12px;border-radius:12px;cursor:pointer}
+    .btn:hover{filter:brightness(1.1)}
+    .btn.primary{background:#17393d;border-color:#2a6f77;color:#c9fbff}
+    .btn.warn{background:#3d1717;border-color:#772a2a;color:#ffd6d6}
+
+    /* Player Pool */
+    .pool{display:flex;flex-direction:column;gap:10px}
+    .pool-controls{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#101717;color:#bfe7ea;font-size:12px;cursor:pointer;user-select:none}
+    .pill.active{background:#17393d;border-color:#2a6f77;color:#dcffff}
+    .players{display:grid;grid-template-columns:1fr;gap:6px;min-height:80px}
+    .player{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);padding:8px;border-radius:12px;cursor:grab}
+    .player:active{cursor:grabbing}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot.ozark{background:#2ecc71}
+    .dot.valley{background:#3498db}
+    .meta{font-size:12px;color:#a7b1b2}
+
+    /* Builder */
+    .builder-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
+    .tabs{display:flex;gap:6px}
+    .tab{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#0f1617;color:#bfe7ea;font-size:12px;cursor:pointer}
+    .tab.active{background:#17393d;border-color:#2a6f77;color:#dcffff}
+
+    .grid{display:grid;grid-template-columns:repeat(2, minmax(280px, 1fr));gap:10px}
+    .card{background:#0e1415;border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:110px}
+    .card h3{margin:0;font-size:14px;letter-spacing:.3px}
+    .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .slot{background:#0b1011;border:1px dashed #2a3a3d;border-radius:10px;min-height:36px;display:flex;align-items:center;justify-content:center;padding:6px;color:#789195}
+    .slot.filled{border-style:solid;border-color:#335a60;background:#0f191a;color:#d9f8fb}
+    .slot.dragover{outline:2px dashed var(--accent);outline-offset:2px}
+
+    .legend{display:flex;gap:10px;align-items:center;font-size:12px;color:#a7b1b2}
+    .legend .swatch{width:10px;height:10px;border-radius:50%}
+
+    /* Sidebar */
+    .side .body{display:flex;flex-direction:column;gap:10px}
+    .list{background:#0d1314;border:1px solid var(--line);border-radius:12px;overflow:auto}
+    .list table{width:100%;border-collapse:collapse;font-size:12px}
+    .list th,.list td{padding:8px;border-bottom:1px solid #1b2a2c}
+    .list th{text-align:left;color:#b6cacc;position:sticky;top:0;background:#0f1516}
+
+    /* Print */
+    @media print{
+      body{background:#fff;color:#000}
+      header,.panel:not(.printable){display:none}
+      .printable{display:block;border:none;box-shadow:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Ozark Pairings Builder</h1>
+      <span class="badge">Captain pairing cards & printable sheets</span>
+      <div style="margin-left:auto" class="row">
+        <button id="btnPrint" class="btn primary">Print / PDF</button>
+        <button id="btnExport" class="btn">Export JSON</button>
+        <button id="btnImport" class="btn">Import JSON</button>
+      </div>
+    </header>
+
+    <!-- Player Pool -->
+    <section class="panel">
+      <div class="head"><h2>Player Pool</h2></div>
+      <div class="body pool">
+        <div class="pool-controls">
+          <input id="search" type="text" placeholder="Search name or nickname" style="flex:1" />
+          <div id="teamFilters" class="row"></div>
+        </div>
+        <div class="legend">
+          <div class="swatch" style="background:#2ecc71"></div> Team Ozark
+          <div class="swatch" style="background:#3498db"></div> Team Valley
+        </div>
+        <div id="players" class="players" aria-live="polite"></div>
+        <div class="row">
+          <button id="btnReloadPool" class="btn">Reload from previous site</button>
+          <button id="btnAddManual" class="btn">Add player</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Builder -->
+    <section class="panel">
+      <div class="head"><h2>Builder</h2></div>
+      <div class="body">
+        <div class="builder-controls">
+          <div class="row">
+            <label>Event</label>
+            <input id="eventName" type="text" placeholder="Ozark Invitational 2026" />
+          </div>
+          <div class="row">
+            <label>Date</label>
+            <input id="eventDate" type="text" placeholder="2026-06-20" />
+          </div>
+          <div class="row">
+            <label>Groups</label>
+            <input id="numGroups" type="number" min="1" max="12" value="6" />
+          </div>
+          <div class="row">
+            <label>Players per group</label>
+            <select id="groupSize"><option>2</option><option selected>4</option></select>
+          </div>
+        </div>
+
+        <div class="row" style="justify-content:space-between;margin:8px 0 12px">
+          <div class="tabs" id="tabs">
+            <button class="tab active" data-side="front">Front 9</button>
+            <button class="tab" data-side="back">Back 9</button>
+          </div>
+          <div class="row">
+            <label>Format</label>
+            <select id="formatSelect">
+              <option value="Best Ball">Best Ball (4‑Ball)</option>
+              <option value="Scramble">Scramble</option>
+              <option value="Alt Shot">Alternate Shot</option>
+              <option value="Shamble">Shamble</option>
+              <option value="Singles">Singles Match Play</option>
+            </select>
+            <button id="btnClearSide" class="btn warn">Clear side</button>
+          </div>
+        </div>
+
+        <div id="grid" class="grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Sidebar: Summary -->
+    <aside class="panel side">
+      <div class="head"><h2>Summary</h2></div>
+      <div class="body">
+        <div class="row">
+          <div class="pill" id="pillOnce">Validate: each player used once/side</div>
+          <div class="pill" id="pillBalance">Validate: balance teams</div>
+        </div>
+        <div id="alerts"></div>
+
+        <div class="list" aria-label="Assignments table">
+          <table>
+            <thead>
+              <tr><th style="width:40%">Player</th><th>Team</th><th>Front</th><th>Back</th></tr>
+            </thead>
+            <tbody id="assignmentTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Print Layout (hidden until print) -->
+    <section id="printArea" class="panel printable" style="display:none;padding:16px">
+      <div id="printContent"></div>
+    </section>
+  </div>
+
+  <script>
+    /*********************************
+     *  0) DATA & STORAGE LAYER
+     *********************************/
+    const SIGNUPS_KEY = "ozarkSignups_v1"; // prior site key
+    const STORAGE_KEY = "ozarkPairings_v2"; // this site's state
+    const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
+    const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
+
+    /** Player shape: {id, firstName, lastName, nickname?, team: 'ozark'|'valley', email?, phone?} */
+    let state = {
+      players: [],
+      filters: { team: "all", q: "" },
+      side: "front", // 'front' | 'back'
+      eventName: "Ozark Invitational 2026",
+      eventDate: "2026-06-20",
+      format: { front: "Best Ball", back: "Scramble" },
+      groups: { front: [], back: [] }, // array of groups -> array of player ids
+      groupSize: 4,
+      numGroups: 6
+    };
+
+    function uid(){ return Math.random().toString(36).slice(2,9) }
+
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
+    function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); if(r){ state = JSON.parse(r); } }catch{} }
+
+    function loadPlayersFromPreviousSite(){
+      // Try to read the old signups array (array of objects)
+      try{
+        const raw = localStorage.getItem(SIGNUPS_KEY);
+        if(!raw) return [];
+        const arr = JSON.parse(raw);
+        return (arr||[]).map((p,i)=>({
+          id: p.id || uid(),
+          firstName: p.firstName || (p.name?.split(" ")[0]||""),
+          lastName: p.lastName || (p.name?.split(" ").slice(1).join(" ")||""),
+          nickname: p.nickname || "",
+          team: (p.team||"").toLowerCase().includes("valley")?"valley":"ozark",
+          email: p.email||"",
+          phone: p.phone||""
+        }));
+      }catch{ return [] }
+    }
+
+    function ensurePlayers(){
+      if(state.players && state.players.length) return;
+      const prior = loadPlayersFromPreviousSite();
+      if(prior.length){ state.players = prior; return; }
+      // Fallback sample if nothing exists
+      state.players = [
+        {id:uid(), firstName:"Nick", lastName:"Brown", nickname:"Frenzy", team:"ozark"},
+        {id:uid(), firstName:"Chris", lastName:"B.", nickname:"CB", team:"ozark"},
+        {id:uid(), firstName:"Alex", lastName:"M.", nickname:"", team:"valley"},
+        {id:uid(), firstName:"Jordan", lastName:"S.", nickname:"J-Smooth", team:"valley"}
+      ];
+    }
+
+    /*********************************
+     *  1) RENDER: PLAYER POOL
+     *********************************/
+    const elPlayers = document.getElementById('players');
+    const elTeamFilters = document.getElementById('teamFilters');
+    const elSearch = document.getElementById('search');
+
+    function renderTeamFilters(){
+      elTeamFilters.innerHTML = '';
+      const teams = ['all','ozark','valley'];
+      teams.forEach(t=>{
+        const b = document.createElement('div');
+        b.className = 'pill' + (state.filters.team===t?' active':'');
+        b.textContent = t==='all'? 'All' : TEAM_LABELS[t];
+        b.addEventListener('click',()=>{ state.filters.team = t; renderPlayers(); renderAssignmentsTable(); save(); });
+        elTeamFilters.appendChild(b);
+      });
+    }
+
+    function playerDisplayName(p){
+      const nick = p.nickname && p.nickname.trim()?.length ? `"${p.nickname}" `:'';
+      return `${p.firstName} ${nick}${p.lastName}`.replace(/\s+/g,' ').trim();
+    }
+
+    function renderPlayers(){
+      const q = (state.filters.q||'').toLowerCase();
+      const team = state.filters.team;
+      elPlayers.innerHTML = '';
+      const used = new Set((state.groups[state.side]||[]).flat());
+      state.players
+        .filter(p => team==='all' || p.team===team)
+        .filter(p => playerDisplayName(p).toLowerCase().includes(q))
+        .sort((a,b)=> a.team.localeCompare(b.team) || playerDisplayName(a).localeCompare(playerDisplayName(b)))
+        .forEach(p=>{
+          const card = document.createElement('div');
+          card.className = 'player';
+          card.draggable = true;
+          card.dataset.id = p.id;
+          card.innerHTML = `
+            <div class="dot ${p.team}" style="background:${TEAM_COLORS[p.team]}"></div>
+            <div>
+              <div>${playerDisplayName(p)}</div>
+              <div class="meta">${TEAM_LABELS[p.team]}</div>
+            </div>`;
+          if(used.has(p.id)) card.style.opacity = .45;
+          card.addEventListener('dragstart', onDragPlayer);
+          elPlayers.appendChild(card);
+        });
+    }
+
+    elSearch.addEventListener('input', (e)=>{ state.filters.q = e.target.value; renderPlayers(); });
+
+    document.getElementById('btnReloadPool').addEventListener('click', ()=>{
+      const fromOld = loadPlayersFromPreviousSite();
+      if(fromOld.length){ state.players = mergePlayers(state.players, fromOld); save(); renderAll(); alert('Loaded players from previous site signups.'); }
+      else alert('No signups found under key '+SIGNUPS_KEY+'. Add players manually or Import JSON.');
+    });
+
+    document.getElementById('btnAddManual').addEventListener('click', ()=>{
+      const firstName = prompt('First name?'); if(!firstName) return;
+      const lastName = prompt('Last name?')||'';
+      const nickname = prompt('Nickname (optional)')||'';
+      const team = (prompt('Team: ozark / valley','ozark')||'ozark').toLowerCase().includes('val')?'valley':'ozark';
+      state.players.push({id:uid(), firstName, lastName, nickname, team}); save(); renderAll();
+    });
+
+    function mergePlayers(existing, incoming){
+      const byKey = x=> (x.firstName+'|'+x.lastName+'|'+(x.email||'')).toLowerCase();
+      const map = new Map(existing.map(p=>[byKey(p), p]));
+      incoming.forEach(p=>{ const k = byKey(p); if(!map.has(k)) map.set(k,p); });
+      return Array.from(map.values());
+    }
+
+    /*********************************
+     *  2) BUILDER GRID
+     *********************************/
+    const elGrid = document.getElementById('grid');
+    const elTabs = document.getElementById('tabs');
+    const elFormat = document.getElementById('formatSelect');
+
+    function initGroupsIfNeeded(){
+      ['front','back'].forEach(side=>{
+        if(!Array.isArray(state.groups[side])) state.groups[side] = [];
+        if(state.groups[side].length !== state.numGroups){
+          state.groups[side] = Array.from({length: state.numGroups}, (_,i)=> (state.groups[side][i]||[]).slice(0,state.groupSize));
+        }
+      });
+    }
+
+    function renderGrid(){
+      initGroupsIfNeeded();
+      elGrid.innerHTML = '';
+      const side = state.side;
+      state.groups[side].forEach((group, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        const fmt = state.format[side];
+        card.innerHTML = `<h3>Group ${idx+1} • ${fmt}</h3>`;
+        const slots = document.createElement('div');
+        slots.className = 'slots';
+        for(let i=0;i<state.groupSize;i++){
+          const s = document.createElement('div');
+          s.className = 'slot'+(group[i]? ' filled':'');
+          s.dataset.group = idx;
+          s.dataset.pos = i;
+          s.textContent = group[i]? playerDisplayName(findPlayer(group[i])) : 'Drop player here';
+          s.addEventListener('dragover', e=>{ e.preventDefault(); s.classList.add('dragover'); });
+          s.addEventListener('dragleave', ()=> s.classList.remove('dragover'));
+          s.addEventListener('drop', e=> onDropToSlot(e, s));
+          s.addEventListener('click', ()=> {
+            if(group[i]){ // remove
+              const pid = group[i];
+              state.groups[side][idx][i] = null;
+              state.groups[side][idx] = state.groups[side][idx].filter(Boolean);
+              // keep array dense
+              while(state.groups[side][idx].length < state.groupSize) state.groups[side][idx].push(null);
+              save(); renderAll();
+            }
+          });
+          slots.appendChild(s);
+        }
+        card.appendChild(slots);
+        elGrid.appendChild(card);
+      });
+    }
+
+    function onDragPlayer(e){
+      e.dataTransfer.setData('text/player', e.currentTarget.dataset.id);
+    }
+
+    function onDropToSlot(e, slot){
+      e.preventDefault(); slot.classList.remove('dragover');
+      const playerId = e.dataTransfer.getData('text/player');
+      if(!playerId) return;
+      assignPlayerToSlot(playerId, Number(slot.dataset.group), Number(slot.dataset.pos));
+    }
+
+    function assignPlayerToSlot(playerId, groupIndex, pos){
+      const side = state.side; initGroupsIfNeeded();
+      // prevent duplicates on the same side
+      for(const g of state.groups[side]){ for(let i=0;i<g.length;i++){ if(g[i]===playerId){ g[i]=null; } } }
+      // ensure position exists
+      while(state.groups[side][groupIndex].length < state.groupSize) state.groups[side][groupIndex].push(null);
+      state.groups[side][groupIndex][pos] = playerId;
+      save(); renderAll();
+    }
+
+    function findPlayer(id){ return state.players.find(p=>p.id===id) }
+
+    // Controls
+    document.getElementById('eventName').addEventListener('input', e=>{ state.eventName = e.target.value; save(); });
+    document.getElementById('eventDate').addEventListener('input', e=>{ state.eventDate = e.target.value; save(); });
+    document.getElementById('numGroups').addEventListener('input', e=>{ state.numGroups = Math.max(1, Math.min(12, Number(e.target.value)||1)); renderAll(); save(); });
+    document.getElementById('groupSize').addEventListener('change', e=>{ state.groupSize = Number(e.target.value)||4; renderAll(); save(); });
+
+    elTabs.addEventListener('click', (e)=>{
+      const t = e.target.closest('.tab'); if(!t) return;
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      state.side = t.dataset.side; save(); renderAll();
+    });
+
+    elFormat.addEventListener('change', (e)=>{ state.format[state.side] = e.target.value; save(); renderAll(); });
+    document.getElementById('btnClearSide').addEventListener('click', ()=>{ if(confirm('Clear all groups on the '+state.side+'?')){ state.groups[state.side] = Array.from({length: state.numGroups}, ()=> Array(state.groupSize).fill(null)); save(); renderAll(); }});
+
+    /*********************************
+     *  3) SUMMARY & VALIDATION
+     *********************************/
+    const elAlerts = document.getElementById('alerts');
+    const elAssignTable = document.getElementById('assignmentTable');
+
+    function renderAssignmentsTable(){
+      const usedFront = new Map();
+      const usedBack  = new Map();
+      (state.groups.front||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) usedFront.set(pid, i+1) }))
+      (state.groups.back||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) usedBack.set(pid, i+1) }))
+      const rows = state.players.map(p=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${playerDisplayName(p)}</td><td>${TEAM_LABELS[p.team]}</td><td>${usedFront.get(p.id)||''}</td><td>${usedBack.get(p.id)||''}</td>`;
+        return tr;
+      });
+      elAssignTable.innerHTML = ''; rows.forEach(r=> elAssignTable.appendChild(r));
+
+      // Alerts
+      const problems = [];
+      // Once per side
+      state.players.forEach(p=>{
+        const f = usedFront.has(p.id); const b = usedBack.has(p.id);
+        if(!f) problems.push(`Front: ${playerDisplayName(p)} not placed`);
+        if(!b) problems.push(`Back: ${playerDisplayName(p)} not placed`);
+      });
+      // Team balance per group
+      ['front','back'].forEach(side=>{
+        (state.groups[side]||[]).forEach((g,i)=>{
+          const teams = g.filter(Boolean).map(findPlayer).map(p=>p.team);
+          const oz = teams.filter(t=>t==='ozark').length;
+          const va = teams.filter(t=>t==='valley').length;
+          if(teams.length>0 && Math.abs(oz-va) > Math.ceil(teams.length/2) - 1){
+            problems.push(`${side[0].toUpperCase()+side.slice(1)} Group ${i+1}: heavy team imbalance (${oz} OZ / ${va} VA)`)
+          }
+        })
+      })
+      elAlerts.innerHTML = problems.length? `<div class="card" style="border-color:#4d2626;background:#171112"><strong style="color:#ffb3b3">Needs attention</strong><ul style="margin:.3rem 0 .2rem .9rem">${problems.map(p=>`<li>${p}</li>`).join('')}</ul></div>` : `<div class="card" style="border-color:#244a3c;background:#0f1513"><strong style="color:#b9fbd2">Looks good</strong><div>Everyone is placed on both sides with reasonable balance.</div></div>`;
+    }
+
+    document.getElementById('pillOnce').addEventListener('click', ()=> alert('This tool enforces one placement per player per side by removing duplicates automatically when you drop a player again.'));
+    document.getElementById('pillBalance').addEventListener('click', ()=> alert('Balance check flags any group where one team greatly outnumbers the other.'));
+
+    /*********************************
+     *  4) PRINT / EXPORT
+     *********************************/
+    const elPrintArea = document.getElementById('printArea');
+    const elPrintContent = document.getElementById('printContent');
+
+    document.getElementById('btnPrint').addEventListener('click', ()=>{
+      buildPrint();
+      window.print();
+    });
+
+    function buildPrint(){
+      const css = `
+        <style>
+          .sheet{page-break-inside:avoid;border:1px solid #888;margin:12px 0;padding:12px;border-radius:10px}
+          .sheet h2{margin:0 0 8px 0;font-size:18px}
+          .sheet table{width:100%;border-collapse:collapse}
+          .sheet th,.sheet td{border:1px solid #999;padding:6px;text-align:left;font-size:12px}
+          .twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        </style>`;
+      const sideTable = (side)=>{
+        const fmt = state.format[side];
+        const rows = (state.groups[side]||[]).map((g,i)=>{
+          const names = g.filter(Boolean).map(findPlayer).map(p=> playerDisplayName(p) + ` (${p.team==='ozark'?'OZ':'VA'})`);
+          return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names.join('<br/>')}</td></tr>`;
+        }).join('');
+        return `<div class="sheet"><h2>${side==='front'?'Front 9':'Back 9'} • ${fmt}</h2><table><thead><tr><th>#</th><th>Format</th><th>Players</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      };
+      elPrintContent.innerHTML = css + `<h1 style="margin:0 0 6px">${state.eventName}</h1><div style="margin:0 0 10px;color:#333">${state.eventDate}</div><div class="twocol">${sideTable('front')}${sideTable('back')}</div>`;
+      elPrintArea.style.display = 'block';
+    }
+
+    document.getElementById('btnExport').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ozark_pairings.json'; a.click();
+    });
+
+    document.getElementById('btnImport').addEventListener('click', ()=>{
+      const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+      inp.onchange = ()=>{
+        const f = inp.files[0]; if(!f) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{ try{ const obj = JSON.parse(reader.result); if(obj && obj.players){ state = obj; save(); renderAll(); alert('Imported.'); } else alert('Invalid JSON: missing players.'); }catch{ alert('Invalid JSON file.'); } };
+        reader.readAsText(f);
+      };
+      inp.click();
+    });
+
+    /*********************************
+     *  5) INIT
+     *********************************/
+    function hydrateControls(){
+      document.getElementById('eventName').value = state.eventName||'';
+      document.getElementById('eventDate').value = state.eventDate||'';
+      document.getElementById('numGroups').value = state.numGroups||6;
+      document.getElementById('groupSize').value = state.groupSize||4;
+      elFormat.value = state.format[state.side] || 'Best Ball';
+      document.querySelectorAll('.tab').forEach(x=>{
+        x.classList.toggle('active', x.dataset.side===state.side);
+      });
+    }
+
+    function renderAll(){
+      hydrateControls();
+      renderTeamFilters();
+      renderPlayers();
+      renderGrid();
+      renderAssignmentsTable();
+    }
+
+    // Boot
+    load();
+    ensurePlayers();
+    initGroupsIfNeeded();
+    renderAll();
+  </script>
+</body>
+</html>
