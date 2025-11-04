@@ -55,9 +55,14 @@
     .tab.active{background:#17393d;border-color:#2a6f77;color:#dcffff}
 
     .grid{display:grid;grid-template-columns:repeat(2, minmax(280px, 1fr));gap:10px}
-    .card{background:#0e1415;border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:110px}
-    .card h3{margin:0;font-size:14px;letter-spacing:.3px}
-    .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .card{background:#0e1415;border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:110px}
+    .card h3{margin:0;font-size:14px;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:center}
+    .subheads{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:#a7b1b2}
+    .subheads span{padding:4px 8px;border:1px solid #223033;border-radius:8px;background:#0e1415;text-align:center}
+    .slots{display:grid;gap:6px}
+    .slots.team{grid-template-columns:1fr 1fr}
+    .slots.team .col{display:grid;grid-template-columns:1fr;gap:6px}
+    .slots.singles{grid-template-columns:repeat(2,1fr)}
     .slot{background:#0b1011;border:1px dashed #2a3a3d;border-radius:10px;min-height:36px;display:flex;align-items:center;justify-content:center;padding:6px;color:#789195}
     .slot.filled{border-style:solid;border-color:#335a60;background:#0f191a;color:#d9f8fb}
     .slot.dragover{outline:2px dashed var(--accent);outline-offset:2px}
@@ -79,50 +84,19 @@
       .printable{display:block;border:none;box-shadow:none}
     }
 
-    /* ===== Leaderboard + Schedule Look ===== */
+    /* Leaderboard / schedule polish */
     body, table { font-variant-numeric: tabular-nums; }
     header { border-radius: 16px; border-top: 2px solid #2b3b3e; box-shadow: 0 12px 40px var(--shadow), inset 0 1px 0 #1a2324; }
     header h1 { letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
     header .badge { background: linear-gradient(180deg,#0f1718,#0a0f10); border-color:#2a3b3e; color:#cfe6e8; box-shadow: inset 0 0 0 1px #0a0f10, 0 6px 18px rgba(0,0,0,.35); }
-
     .player { background: linear-gradient(180deg,#0f1516,#0d1314); border-color:#1c2a2c; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-    .player:hover { transform: translateY(-1px); transition: transform .12s ease; }
     .tabs { background:#0e1415; padding:4px; border:1px solid #223033; border-radius:999px; }
     .tab { background:transparent; border-color:transparent; color:#a8c6c9; }
     .tab.active { background:#17393d; border-color:#2a6f77; color:#dcffff; box-shadow: 0 2px 10px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.03); }
-
-    .grid { gap:12px; }
-    .card { background: linear-gradient(180deg,#0f1516,#0d1213); border:1px solid #203135; box-shadow: 0 10px 26px rgba(0,0,0,.35); position: relative; }
-    .card h3 { display:flex; align-items:center; justify-content:space-between; gap:8px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#d8f3f6; }
-    .card h3::after { content:"TEE"; font-size:10px; letter-spacing:.14em; color:#8bb9bf; padding:2px 8px; border:1px solid #2b464b; border-radius:999px; background:#0e1718; }
-
-    .slots { gap:8px; }
-    .slot { min-height:38px; border-radius:10px; border:1px dashed #2a3a3d; background:linear-gradient(180deg,#0b1011,#0a0f10); color:#b6cacc; font-weight:600; letter-spacing:.02em; }
-    .slot.filled { border-style:solid; border-color:#2e5860; background:linear-gradient(180deg,#0e1819,#0b1213); color:#e7f8fb; box-shadow: inset 0 -1px 0 rgba(255,255,255,.04); }
-    .legend { border-top:1px dashed #1b2a2c; padding-top:8px; }
-
     .list { border-color:#203135; box-shadow: 0 10px 26px rgba(0,0,0,.35); }
-    .list table { border-collapse: separate; border-spacing:0; }
-    .list th { font-size:11px; text-transform:uppercase; letter-spacing:.12em; border-bottom:1px solid #213033; }
-    .list td, .list th { padding:10px 10px; }
     .list tbody tr:nth-child(odd){ background: linear-gradient(180deg, #0b1112, #0a0f10); }
     .list tbody tr:hover{ background:#101a1b; }
-    .list td:nth-child(1){ position: sticky; left: 0; background: inherit; z-index: 1; }
     .list td:nth-child(3), .list td:nth-child(4){ text-align:center; font-weight:700; }
-
-    #alerts .card { border-radius:12px; }
-    .btn { box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.02); }
-    .btn.primary { background: linear-gradient(180deg,#1a3e43,#143236); }
-    .btn.warn { background: linear-gradient(180deg,#452020,#2e1313); }
-    .panel .head { background: linear-gradient(180deg,#0d1314,#0a0f10); border-bottom-color:#1c2a2c; }
-    input[type="text"], input[type="number"], select, textarea{
-      background: linear-gradient(180deg,#0e1415,#0c1112);
-      border-color:#1c2a2c;
-    }
-    @media print{
-      .sheet table th { background:#efefef; }
-      .sheet table td:nth-child(1){ width:40px }
-    }
   </style>
 </head>
 <body>
@@ -178,7 +152,7 @@
           </div>
           <div class="row">
             <label>Players per group</label>
-            <select id="groupSize"><option>2</option><option selected>4</option></select>
+            <select id="groupSize"><option value="2">2</option><option value="4" selected>4</option></select>
           </div>
         </div>
 
@@ -210,7 +184,7 @@
       <div class="body">
         <div class="row">
           <div class="pill" id="pillOnce">Validate: each player used once/side</div>
-          <div class="pill" id="pillBalance">Validate: balance teams</div>
+          <div class="pill" id="pillBalance">Validate: team composition</div>
         </div>
         <div id="alerts"></div>
 
@@ -225,7 +199,7 @@
       </div>
     </aside>
 
-    <!-- Print Layout (hidden until print) -->
+    <!-- Print Layout -->
     <section id="printArea" class="panel printable" style="display:none;padding:16px">
       <div id="printContent"></div>
     </section>
@@ -235,8 +209,8 @@
     /*********************************
      *  0) DATA & STORAGE LAYER
      *********************************/
-    const SIGNUPS_KEY = "ozarkSignups_v1"; // prior site key
-    const STORAGE_KEY = "ozarkPairings_v2"; // this site's state
+    const SIGNUPS_KEY = "ozarkSignups_v1";
+    const STORAGE_KEY = "ozarkPairings_v2";
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
 
@@ -244,17 +218,16 @@
     let state = {
       players: [],
       filters: { team: "all", q: "" },
-      side: "front", // 'front' | 'back'
+      side: "front",
       eventName: "Ozark Invitational 2026",
       eventDate: "2026-06-20",
       format: { front: "Best Ball", back: "Scramble" },
-      groups: { front: [], back: [] }, // array of groups -> array of player ids
-      groupSize: 4,
+      groups: { front: [], back: [] }, // per side: array of groups -> array of playerIds
+      groupSize: 4,                     // will be auto-set by format (4 for team formats, 2 for singles)
       numGroups: 6
     };
 
     function uid(){ return Math.random().toString(36).slice(2,9) }
-
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
     function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); if(r){ state = JSON.parse(r); } }catch{} }
 
@@ -365,54 +338,103 @@
     }
 
     /*********************************
-     *  2) BUILDER GRID
+     *  2) BUILDER GRID (2v2 teams; singles 1v1)
      *********************************/
     const elGrid = document.getElementById('grid');
-    const elTabs = document.getElementById('tabs');  <!-- fixed line -->
+    const elTabs = document.getElementById('tabs');
     const elFormat = document.getElementById('formatSelect');
+    const elGroupSize = document.getElementById('groupSize');
+
+    const TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
+
+    function setGroupSizeForCurrentFormat(){
+      const side = state.side;
+      const fmt = state.format[side];
+      const desired = TEAM_FORMATS.has(fmt) ? 4 : 2;
+      state.groupSize = desired;
+      // reflect & lock UI
+      elGroupSize.value = String(desired);
+      elGroupSize.disabled = true;
+      initGroupsIfNeeded();
+    }
 
     function initGroupsIfNeeded(){
       ['front','back'].forEach(side=>{
         if(!Array.isArray(state.groups[side])) state.groups[side] = [];
+        // ensure numGroups and groupSize shape
         if(state.groups[side].length !== state.numGroups){
           state.groups[side] = Array.from({length: state.numGroups}, (_,i)=> (state.groups[side][i]||[]).slice(0,state.groupSize));
         }
+        state.groups[side] = state.groups[side].map(g=>{
+          const arr = g.slice(0, state.groupSize);
+          while (arr.length < state.groupSize) arr.push(null);
+          return arr;
+        });
       });
     }
 
     function renderGrid(){
-      initGroupsIfNeeded();
+      setGroupSizeForCurrentFormat();
       elGrid.innerHTML = '';
       const side = state.side;
+      const fmt = state.format[side];
+      const isTeam = TEAM_FORMATS.has(fmt);
+
       state.groups[side].forEach((group, idx)=>{
         const card = document.createElement('div');
         card.className = 'card';
-        const fmt = state.format[side];
         card.innerHTML = `<h3>Group ${idx+1} • ${fmt}</h3>`;
-        const slots = document.createElement('div');
-        slots.className = 'slots';
-        for(let i=0;i<state.groupSize;i++){
-          const s = document.createElement('div');
-          s.className = 'slot'+(group[i]? ' filled':'');
-          s.dataset.group = idx;
-          s.dataset.pos = i;
-          s.textContent = group[i]? playerDisplayName(findPlayer(group[i])) : 'Drop player here';
-          s.addEventListener('dragover', e=>{ e.preventDefault(); s.classList.add('dragover'); });
-          s.addEventListener('dragleave', ()=> s.classList.remove('dragover'));
-          s.addEventListener('drop', e=> onDropToSlot(e, s));
-          s.addEventListener('click', ()=> {
-            if(group[i]){ // remove
-              state.groups[side][idx][i] = null;
-              state.groups[side][idx] = state.groups[side][idx].filter(Boolean);
-              while(state.groups[side][idx].length < state.groupSize) state.groups[side][idx].push(null);
-              save(); renderAll();
-            }
-          });
-          slots.appendChild(s);
+
+        const sub = document.createElement('div');
+        if(isTeam){
+          sub.className = 'subheads';
+          sub.innerHTML = `<span>Team A</span><span>Team B</span>`;
+          card.appendChild(sub);
         }
-        card.appendChild(slots);
+
+        const slotsWrap = document.createElement('div');
+        slotsWrap.className = 'slots ' + (isTeam ? 'team' : 'singles');
+
+        if(isTeam){
+          const colA = document.createElement('div'); colA.className = 'col';
+          const colB = document.createElement('div'); colB.className = 'col';
+
+          for(let i=0;i<2;i++){
+            colA.appendChild(buildSlot(idx, i, group[i]));
+          }
+          for(let i=2;i<4;i++){
+            colB.appendChild(buildSlot(idx, i, group[i]));
+          }
+          slotsWrap.appendChild(colA);
+          slotsWrap.appendChild(colB);
+        }else{
+          for(let i=0;i<2;i++){
+            slotsWrap.appendChild(buildSlot(idx, i, group[i]));
+          }
+        }
+
+        card.appendChild(slotsWrap);
         elGrid.appendChild(card);
       });
+    }
+
+    function buildSlot(groupIndex, pos, playerId){
+      const s = document.createElement('div');
+      s.className = 'slot'+(playerId? ' filled':'');
+      s.dataset.group = groupIndex;
+      s.dataset.pos = pos;
+      s.textContent = playerId ? playerDisplayName(findPlayer(playerId)) : 'Drop player here';
+      s.addEventListener('dragover', e=>{ e.preventDefault(); s.classList.add('dragover'); });
+      s.addEventListener('dragleave', ()=> s.classList.remove('dragover'));
+      s.addEventListener('drop', e=> onDropToSlot(e, s));
+      s.addEventListener('click', ()=> {
+        const side = state.side;
+        if(state.groups[side][groupIndex][pos]){
+          state.groups[side][groupIndex][pos] = null;
+          save(); renderAll();
+        }
+      });
+      return s;
     }
 
     function onDragPlayer(e){
@@ -428,8 +450,8 @@
 
     function assignPlayerToSlot(playerId, groupIndex, pos){
       const side = state.side; initGroupsIfNeeded();
+      // remove any existing placement on this side
       for(const g of state.groups[side]){ for(let i=0;i<g.length;i++){ if(g[i]===playerId){ g[i]=null; } } }
-      while(state.groups[side][groupIndex].length < state.groupSize) state.groups[side][groupIndex].push(null);
       state.groups[side][groupIndex][pos] = playerId;
       save(); renderAll();
     }
@@ -439,18 +461,33 @@
     // Controls
     document.getElementById('eventName').addEventListener('input', e=>{ state.eventName = e.target.value; save(); });
     document.getElementById('eventDate').addEventListener('input', e=>{ state.eventDate = e.target.value; save(); });
-    document.getElementById('numGroups').addEventListener('input', e=>{ state.numGroups = Math.max(1, Math.min(12, Number(e.target.value)||1)); renderAll(); save(); });
-    document.getElementById('groupSize').addEventListener('change', e=>{ state.groupSize = Number(e.target.value)||4; renderAll(); save(); });
+    document.getElementById('numGroups').addEventListener('input', e=>{ state.numGroups = Math.max(1, Math.min(12, Number(e.target.value)||1)); initGroupsIfNeeded(); renderAll(); save(); });
+
+    // groupSize is auto-managed; keep UI disabled
+    document.getElementById('groupSize').addEventListener('change', e=>{
+      // ignore manual changes; we always enforce by format
+      setGroupSizeForCurrentFormat(); renderAll(); save();
+    });
 
     elTabs.addEventListener('click', (e)=>{
       const t = e.target.closest('.tab'); if(!t) return;
       document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
       t.classList.add('active');
-      state.side = t.dataset.side; save(); renderAll();
+      state.side = t.dataset.side;
+      setGroupSizeForCurrentFormat(); save(); renderAll();
     });
 
-    elFormat.addEventListener('change', (e)=>{ state.format[state.side] = e.target.value; save(); renderAll(); });
-    document.getElementById('btnClearSide').addEventListener('click', ()=>{ if(confirm('Clear all groups on the '+state.side+'?')){ state.groups[state.side] = Array.from({length: state.numGroups}, ()=> Array(state.groupSize).fill(null)); save(); renderAll(); }});
+    elFormat.addEventListener('change', (e)=>{
+      state.format[state.side] = e.target.value;
+      setGroupSizeForCurrentFormat(); save(); renderAll();
+    });
+
+    document.getElementById('btnClearSide').addEventListener('click', ()=>{
+      if(confirm('Clear all groups on the '+state.side+'?')){
+        state.groups[state.side] = Array.from({length: state.numGroups}, ()=> Array(state.groupSize).fill(null));
+        save(); renderAll();
+      }
+    });
 
     /*********************************
      *  3) SUMMARY & VALIDATION
@@ -470,27 +507,43 @@
       });
       elAssignTable.innerHTML = ''; rows.forEach(r=> elAssignTable.appendChild(r));
 
+      // Alerts
       const problems = [];
+      // Once per side
       state.players.forEach(p=>{
         const f = usedFront.has(p.id); const b = usedBack.has(p.id);
         if(!f) problems.push(`Front: ${playerDisplayName(p)} not placed`);
         if(!b) problems.push(`Back: ${playerDisplayName(p)} not placed`);
       });
+
+      // Composition checks
       ['front','back'].forEach(side=>{
+        const fmt = state.format[side];
+        const isTeam = TEAM_FORMATS.has(fmt);
         (state.groups[side]||[]).forEach((g,i)=>{
-          const teams = g.filter(Boolean).map(findPlayer).map(p=>p.team);
-          const oz = teams.filter(t=>t==='ozark').length;
-          const va = teams.filter(t=>t==='valley').length;
-          if(teams.length>0 && Math.abs(oz-va) > Math.ceil(teams.length/2) - 1){
-            problems.push(`${side[0].toUpperCase()+side.slice(1)} Group ${i+1}: heavy team imbalance (${oz} OZ / ${va} VA)`)
+          const players = g.filter(Boolean).map(findPlayer);
+          if(isTeam){
+            if(players.length > 0){
+              const oz = players.filter(p=>p.team==='ozark').length;
+              const va = players.filter(p=>p.team==='valley').length;
+              if(players.length !== 4) problems.push(`${cap(side)} Group ${i+1}: incomplete (needs 4 players: 2v2)`);
+              else if(!(oz===2 && va===2)) problems.push(`${cap(side)} Group ${i+1}: must be 2 from Ozark and 2 from Valley (now ${oz} OZ / ${va} VA)`);
+            }
+          }else{ // singles
+            if(players.length>0 && players.length!==2) problems.push(`${cap(side)} Group ${i+1}: singles must be 1v1 (2 players)`);
           }
-        })
-      })
-      elAlerts.innerHTML = problems.length? `<div class="card" style="border-color:#4d2626;background:#171112"><strong style="color:#ffb3b3">Needs attention</strong><ul style="margin:.3rem 0 .2rem .9rem">${problems.map(p=>`<li>${p}</li>`).join('')}</ul></div>` : `<div class="card" style="border-color:#244a3c;background:#0f1513"><strong style="color:#b9fbd2">Looks good</strong><div>Everyone is placed on both sides with reasonable balance.</div></div>`;
+        });
+      });
+
+      elAlerts.innerHTML = problems.length
+        ? `<div class="card" style="border-color:#4d2626;background:#171112"><strong style="color:#ffb3b3">Needs attention</strong><ul style="margin:.3rem 0 .2rem .9rem">${problems.map(p=>`<li>${p}</li>`).join('')}</ul></div>`
+        : `<div class="card" style="border-color:#244a3c;background:#0f1513"><strong style="color:#b9fbd2">Looks good</strong><div>Everyone is placed with correct pair sizes.</div></div>`;
     }
 
-    document.getElementById('pillOnce').addEventListener('click', ()=> alert('This tool enforces one placement per player per side by removing duplicates automatically when you drop a player again.'));
-    document.getElementById('pillBalance').addEventListener('click', ()=> alert('Balance check flags any group where one team greatly outnumbers the other.'));
+    function cap(s){return s[0].toUpperCase()+s.slice(1)}
+
+    document.getElementById('pillOnce').addEventListener('click', ()=> alert('One placement per player per side is enforced automatically.'));
+    document.getElementById('pillBalance').addEventListener('click', ()=> alert('Team events require 2v2 (two Ozark and two Valley per group). Singles require 1v1.'));
 
     /*********************************
      *  4) PRINT / EXPORT
@@ -509,18 +562,30 @@
           .sheet{page-break-inside:avoid;border:1px solid #888;margin:12px 0;padding:12px;border-radius:10px}
           .sheet h2{margin:0 0 8px 0;font-size:18px}
           .sheet table{width:100%;border-collapse:collapse}
-          .sheet th,.sheet td{border:1px solid #999;padding:6px;text-align:left;font-size:12px}
+          .sheet th,.sheet td{border:1px solid #999;padding:6px;text-align:left;font-size:12px;vertical-align:top}
           .twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+          .teams{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+          .teams .box{border:1px solid #bbb;padding:6px;border-radius:6px}
+          .muted{color:#555}
         </style>`;
-      const sideTable = (side)=>{
+      const sideBlock = (side)=>{
         const fmt = state.format[side];
+        const isTeam = TEAM_FORMATS.has(fmt);
         const rows = (state.groups[side]||[]).map((g,i)=>{
-          const names = g.filter(Boolean).map(findPlayer).map(p=> playerDisplayName(p) + ` (${p.team==='ozark'?'OZ':'VA'})`);
-          return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names.join('<br/>')}</td></tr>`;
+          if(isTeam){
+            const a = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
+            const b = g.slice(2,4).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
+            return `<tr><td>${i+1}</td><td>${fmt}</td><td><div class="teams"><div class="box"><strong>Team A</strong><br/>${a}</div><div class="box"><strong>Team B</strong><br/>${b}</div></div></td></tr>`;
+          }else{
+            const names = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
+            return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names}</td></tr>`;
+          }
         }).join('');
         return `<div class="sheet"><h2>${side==='front'?'Front 9':'Back 9'} • ${fmt}</h2><table><thead><tr><th>#</th><th>Format</th><th>Players</th></tr></thead><tbody>${rows}</tbody></table></div>`;
       };
-      elPrintContent.innerHTML = css + `<h1 style="margin:0 0 6px">${state.eventName}</h1><div style="margin:0 0 10px;color:#333">${state.eventDate}</div><div class="twocol">${sideTable('front')}${sideTable('back')}</div>`;
+      elPrintContent.innerHTML = css +
+        `<h1 style="margin:0 0 6px">${state.eventName}</h1><div style="margin:0 0 10px;color:#333">${state.eventDate}</div>` +
+        `<div class="twocol">${sideBlock('front')}${sideBlock('back')}</div>`;
       elPrintArea.style.display = 'block';
     }
 
@@ -705,6 +770,7 @@
       document.getElementById('eventName').value = state.eventName||'';
       document.getElementById('eventDate').value = state.eventDate||'';
       document.getElementById('numGroups').value = state.numGroups||6;
+      setGroupSizeForCurrentFormat();
       document.getElementById('groupSize').value = state.groupSize||4;
       document.getElementById('formatSelect').value = state.format[state.side] || 'Best Ball';
       document.querySelectorAll('.tab').forEach(x=>{
