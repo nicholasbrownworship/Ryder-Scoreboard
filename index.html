@@ -160,17 +160,27 @@
             </div>
           </div>
           <div class="row">
-            <label>Format</label>
-            <select id="formatSelect">
-              <option value="Best Ball">Best Ball (4-Ball)</option>
-              <option value="Scramble">Scramble</option>
-              <option value="Alt Shot">Alternate Shot</option>
-              <option value="Shamble">Shamble</option>
-              <option value="Singles">Singles Match Play</option>
-            </select>
-            <button id="btnClearSide" class="btn warn">Clear side</button>
-          </div>
-        </div>
+  <label>Format</label>
+  <select id="formatSelect">
+    <option value="Best Ball">Best Ball (4-Ball)</option>
+    <option value="Scramble">Scramble</option>
+    <option value="Alt Shot">Alternate Shot</option>
+    <option value="Singles">Singles Match Play</option>
+  </select>
+  <button id="btnClearSide" class="btn warn">Clear side</button>
+
+  <!-- Auto-pair controls -->
+  <label style="margin-left:10px">Auto-pair:</label>
+  <button id="btnAutoPairRound" class="btn">This round</button>
+  <button id="btnAutoPairDay" class="btn">Both rounds (this day)</button>
+  <button id="btnAutoPairAll" class="btn">All rounds (D1 & D2)</button>
+
+  <label class="row" style="gap:6px;margin-left:10px">
+    <input id="chkFillUnassigned" type="checkbox" />
+    Fill unassigned only
+  </label>
+</div>
+
 
         <div id="grid" class="grid" aria-live="polite"></div>
       </div>
@@ -825,5 +835,8 @@
     initGroupsIfNeeded();
     renderAll();
   </script>
+
+  <script src="autopair.js"></script>
+
 </body>
 </html>
