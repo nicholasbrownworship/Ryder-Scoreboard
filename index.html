@@ -259,7 +259,6 @@
     function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); if(r){ state = JSON.parse(r); } }catch{} }
 
     function loadPlayersFromPreviousSite(){
-      // Try to read the old signups array (array of objects)
       try{
         const raw = localStorage.getItem(SIGNUPS_KEY);
         if(!raw) return [];
@@ -280,7 +279,6 @@
       if(state.players && state.players.length) return;
       const prior = loadPlayersFromPreviousSite();
       if(prior.length){ state.players = prior; return; }
-      // Fallback sample if nothing exists
       state.players = [
         {id:uid(), firstName:"Nick", lastName:"Brown", nickname:"Frenzy", team:"ozark"},
         {id:uid(), firstName:"Chris", lastName:"B.", nickname:"CB", team:"ozark"},
@@ -370,7 +368,7 @@
      *  2) BUILDER GRID
      *********************************/
     const elGrid = document.getElementById('grid');
-    aconst elTabs = document.getElementById('tabs');
+    const elTabs = document.getElementById('tabs');  <!-- fixed line -->
     const elFormat = document.getElementById('formatSelect');
 
     function initGroupsIfNeeded(){
