@@ -793,6 +793,31 @@
       }
       return out;
     }
+    document.getElementById('btnImportCSV').addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = '.csv,text/csv';
+      inp.onchange = () => {
+        const f = inp.files?.[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            const incoming = playersFromCSV(String(r.result || ''));
+            if (!incoming.length) { alert('No rows found in CSV.'); return; }
+            const before = (state.players || []).length;
+            mergeIntoPlayers(incoming);
+            const added = state.players.length - before;
+            alert(`CSV import complete. ${added} player${added===1?'':'s'} added.`);
+          } catch (e) {
+            console.error(e);
+            alert('Could not parse CSV. Please check the file format.');
+          }
+        };
+        r.readAsText(f);
+      };
+      inp.click();
+    });
 
     /*********************************
      *  5) UI HYDRATE + RENDER ALL
