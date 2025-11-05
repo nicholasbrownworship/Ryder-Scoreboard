@@ -1,22 +1,17 @@
-/* autopair.js
- * Depends on globals from your main page:
- * - state, save(), renderAll()
- * - state.format[day][side], state.groups[day][side], state.players, state.numGroups
- *
- * Optional globals used if present (fallbacks provided):
- * - TEAM_FORMATS (Set of team formats)
- * - desiredGroupSize(fmt)
+/* autopair.js (defensive)
+ * Requires your page to define: state, save(), renderAll()
+ * Optional globals: TEAM_FORMATS (Set), desiredGroupSize(fmt)
  */
 
 (function () {
   'use strict';
 
   if (!window.state) {
-    console.warn("[autopair] 'state' not found; load this after your main script.");
+    console.warn("[autopair] 'state' not found; load this AFTER your main inline script.");
     return;
   }
 
-  // ---------- Config fallbacks ----------
+  // ---------- Safe config fallbacks ----------
   const TEAM_FORMATS =
     (window.TEAM_FORMATS instanceof Set && window.TEAM_FORMATS.size)
       ? window.TEAM_FORMATS
@@ -25,12 +20,11 @@
   const desiredGroupSize =
     typeof window.desiredGroupSize === 'function'
       ? window.desiredGroupSize
-      : function(fmt){ return TEAM_FORMATS.has(fmt) ? 4 : 2; };
+      : (fmt => TEAM_FORMATS.has(fmt) ? 4 : 2);
 
   // ---------- Utilities ----------
   function findPlayer(id){ return (state.players||[]).find(p=>p.id===id); }
 
-  // Seeded RNG & shuffle (deterministic when seed provided)
   function mulberry32(a){
     return function(){
       let t=a+=0x6D2B79F5;
@@ -53,34 +47,43 @@
     return `${day==='day1'?'Day 1':'Day 2'} ${side==='front'?'Front 9':'Back 9'}`;
   }
 
-  // ---------- Availability & clearing ----------
+  // ---------- Safe group ensure ----------
+  function ensureSide(day, side, fmt){
+    state.groups = state.groups || {};
+    state.groups[day] = state.groups[day] || {};
+    const gs = desiredGroupSize(fmt);
+    const count = Math.max(1, Number(state.numGroups)||1);
+    let arr = state.groups[day][side];
+    if (!Array.isArray(arr) || arr.length !== count) {
+      arr = Array.from({length: count}, ()=> Array(gs).fill(null));
+    } else {
+      arr = arr.map(g=>{
+        const x = Array.isArray(g) ? g.slice(0, gs) : [];
+        while (x.length < gs) x.push(null);
+        return x;
+      });
+    }
+    state.groups[day][side] = arr;
+  }
+
+  // ---------- Availability ----------
   function availableByTeam(day, side){
     const placed = new Set((state.groups?.[day]?.[side]||[]).flat().filter(Boolean));
     const oz = [], va = [];
     for(const p of state.players||[]){
-      if (placed.has(p.id)) continue; // once per side per day
+      if (placed.has(p.id)) continue; // one use per side per day
       (p.team === 'valley' ? va : oz).push(p.id);
     }
     return { oz, va };
   }
 
-  function clearRoundIfNeeded(day, side, fillMode){
-    if (fillMode !== 'overwrite') return;
-    const fmt = state.format?.[day]?.[side] || 'Best Ball';
-    const gs = desiredGroupSize(fmt);
-    state.groups[day][side] = Array.from({length: state.numGroups||1}, ()=> Array(gs).fill(null));
-  }
-
   // ---------- Builders ----------
-  // TEAM formats (2v2)
   function buildAssignmentsTeam(ozIds, vaIds, groupsCount, options){
     const seed = options.seed ?? null;
     const A = shuffle(ozIds, seed);
     const B = shuffle(vaIds, seed!=null ? Number(seed)+1 : null);
-
-    const pairs = (arr)=>{ const out=[]; for(let i=0;i<arr.length;i+=2) out.push(arr.slice(i,i+2)); return out; };
-    const pairsA = pairs(A);
-    const pairsB = pairs(B);
+    const mkPairs = arr => { const out=[]; for(let i=0;i<arr.length;i+=2) out.push(arr.slice(i,i+2)); return out; };
+    const pairsA = mkPairs(A), pairsB = mkPairs(B);
 
     const assignments = Array.from({length: groupsCount}, ()=> [null,null,null,null]);
     let pa = 0, pb = 0, shortA = 0, shortB = 0;
@@ -95,11 +98,9 @@
       if (pairB.length === 2){ assignments[g][2]=pairB[0]; assignments[g][3]=pairB[1]; pb++; }
       else { if (pairB.length===1){ assignments[g][2]=pairB[0]; } shortB += (2 - pairB.length); }
     }
-
     return { assignments, shortA, shortB };
   }
 
-  // Singles (1v1)
   function buildAssignmentsSingles(ozIds, vaIds, groupsCount, options){
     const seed = options.seed ?? null;
     const A = shuffle(ozIds, seed);
@@ -107,7 +108,6 @@
 
     const assignments = Array.from({length: groupsCount}, ()=> [null,null]);
     let i=0, j=0;
-
     for(let g=0; g<groupsCount; g++){
       assignments[g][0] = A[i] ?? null; if (A[i] != null) i++;
       assignments[g][1] = B[j] ?? null; if (B[j] != null) j++;
@@ -140,50 +140,54 @@
 
   // ---------- Public API ----------
   function autoPairRound(day, side, options={}){
-    const fmt = state.format?.[day]?.[side] || 'Best Ball';
-    const gs  = desiredGroupSize(fmt);
-    const isTeam = TEAM_FORMATS.has(fmt);
+    try {
+      const fmt = (state.format?.[day]?.[side]) || 'Best Ball';
+      // Always ensure the side exists & slot counts match current format:
+      ensureSide(day, side, fmt);
 
-    const fillMode =
-      options.fillMode ||
-      (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite');
+      const gs  = desiredGroupSize(fmt);
+      const isTeam = TEAM_FORMATS.has(fmt);
 
-    clearRoundIfNeeded(day, side, fillMode);
+      const fillMode =
+        options.fillMode ||
+        (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite');
 
-    const { oz, va } = availableByTeam(day, side);
+      if (fillMode === 'overwrite') {
+        // reset side cleanly to correct shape
+        state.groups[day][side] = Array.from({length: Math.max(1, Number(state.numGroups)||1)}, ()=> Array(gs).fill(null));
+      }
 
-    if (isTeam && gs===4){
-      const res = buildAssignmentsTeam(oz, va, state.numGroups||1, options);
-      applyAssignments(day, side, res.assignments, { fillMode });
+      const { oz, va } = availableByTeam(day, side);
 
-      const msgs = [];
-      if (res.shortA) msgs.push(`Ozark short by ${res.shortA} slot(s) on ${labelRound(day,side)}.`);
-      if (res.shortB) msgs.push(`Valley short by ${res.shortB} slot(s) on ${labelRound(day,side)}.`);
-      if (msgs.length) alert(msgs.join("\n"));
-    } else {
-      const res = buildAssignmentsSingles(oz, va, state.numGroups||1, options);
-      applyAssignments(day, side, res.assignments, { fillMode });
+      console.log('[autopair] run', { day, side, fmt, isTeam, gs, fillMode, numGroups: state.numGroups, availOz: oz.length, availVa: va.length });
 
-      const need = state.numGroups||1;
-      const msgs = [];
-      if (oz.length < need) msgs.push(`Ozark has only ${oz.length} available for singles on ${labelRound(day,side)} (need ${need}).`);
-      if (va.length < need) msgs.push(`Valley has only ${va.length} available for singles on ${labelRound(day,side)} (need ${need}).`);
-      if (msgs.length) alert(msgs.join("\n"));
+      if (isTeam && gs===4){
+        const res = buildAssignmentsTeam(oz, va, Math.max(1, Number(state.numGroups)||1), options);
+        applyAssignments(day, side, res.assignments, { fillMode });
+        const msgs = [];
+        if (res.shortA) msgs.push(`Ozark short by ${res.shortA} slot(s) on ${labelRound(day,side)}.`);
+        if (res.shortB) msgs.push(`Valley short by ${res.shortB} slot(s) on ${labelRound(day,side)}.`);
+        if (msgs.length) alert(msgs.join("\n"));
+      } else {
+        const res = buildAssignmentsSingles(oz, va, Math.max(1, Number(state.numGroups)||1), options);
+        applyAssignments(day, side, res.assignments, { fillMode });
+        const need = Math.max(1, Number(state.numGroups)||1);
+        const msgs = [];
+        if (oz.length < need) msgs.push(`Ozark has only ${oz.length} available for singles on ${labelRound(day,side)} (need ${need}).`);
+        if (va.length < need) msgs.push(`Valley has only ${va.length} available for singles on ${labelRound(day,side)} (need ${need}).`);
+        if (msgs.length) alert(msgs.join("\n"));
+      }
+
+      if (typeof save === 'function') save();
+      if (typeof renderAll === 'function') renderAll();
+    } catch (err) {
+      console.error('[autopair] ERROR in autoPairRound:', err);
+      alert('Auto-pair hit an error. Check console for details.');
     }
-
-    if (typeof save === 'function') save();
-    if (typeof renderAll === 'function') renderAll();
   }
 
-  function autoPairDay(day, options={}){
-    autoPairRound(day, 'front', options);
-    autoPairRound(day, 'back',  options);
-  }
-
-  function autoPairAll(options={}){
-    autoPairDay('day1', options);
-    autoPairDay('day2', options);
-  }
+  function autoPairDay(day, options={}){ autoPairRound(day, 'front', options); autoPairRound(day, 'back', options); }
+  function autoPairAll(options={}){ autoPairDay('day1', options); autoPairDay('day2', options); }
 
   // ---------- Wire buttons ----------
   function wireButtons(){
@@ -192,16 +196,19 @@
     const btnAll   = document.getElementById('btnAutoPairAll');
 
     if (btnRound) btnRound.addEventListener('click', ()=>{
+      console.log('[autopair] Click: This round', { day: state.currentDay, side: state.side });
       autoPairRound(state.currentDay, state.side, {
         fillMode: (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite')
       });
     });
     if (btnDay) btnDay.addEventListener('click', ()=>{
+      console.log('[autopair] Click: Both rounds (day)', { day: state.currentDay });
       autoPairDay(state.currentDay, {
         fillMode: (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite')
       });
     });
     if (btnAll) btnAll.addEventListener('click', ()=>{
+      console.log('[autopair] Click: All rounds');
       autoPairAll({
         fillMode: (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite')
       });
@@ -217,11 +224,6 @@
   // expose for debugging
   window.__autoPair = { autoPairRound, autoPairDay, autoPairAll };
 
-  // helpful console ping
-  try {
-    console.log('[autopair] ready:', {
-      hasState: !!window.state,
-      TEAM_FORMATS: TEAM_FORMATS ? [...TEAM_FORMATS] : null
-    });
-  } catch {}
+  // startup ping
+  try { console.log('[autopair] ready', { hasState: !!window.state, TEAM_FORMATS: TEAM_FORMATS ? [...TEAM_FORMATS] : null }); } catch {}
 })();
