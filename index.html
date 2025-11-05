@@ -323,12 +323,32 @@
       return `${p.firstName} ${nick}${p.lastName}`.replace(/\s+/g,' ').trim();
     }
 
+    /* NEW: remove player helper (cleans from all groups + roster) */
+    function removePlayerEverywhere(playerId){
+      ['day1','day2'].forEach(day=>{
+        ['front','back'].forEach(side=>{
+          const groups = state.groups?.[day]?.[side] || [];
+          for (const g of groups) {
+            for (let i=0; i<g.length; i++) {
+              if (g[i] === playerId) g[i] = null;
+            }
+          }
+        });
+      });
+      state.players = (state.players || []).filter(p => p.id !== playerId);
+      save();
+      renderAll();
+    }
+
+    /* UPDATED: renderPlayers now includes a delete × button */
     function renderPlayers(){
       const q = (state.filters.q||'').toLowerCase();
       const team = state.filters.team;
       elPlayers.innerHTML = '';
+
       const used = new Set((state.groups[state.currentDay][state.side]||[]).flat());
-      state.players
+
+      (state.players || [])
         .filter(p => team==='all' || p.team===team)
         .filter(p => playerDisplayName(p).toLowerCase().includes(q))
         .sort((a,b)=> a.team.localeCompare(b.team) || playerDisplayName(a).localeCompare(playerDisplayName(b)))
@@ -337,14 +357,31 @@
           card.className = 'player';
           card.draggable = true;
           card.dataset.id = p.id;
+
           card.innerHTML = `
             <div class="dot ${p.team}" style="background:${TEAM_COLORS[p.team]}"></div>
             <div>
               <div>${playerDisplayName(p)}</div>
               <div class="meta">${TEAM_LABELS[p.team]}</div>
-            </div>`;
+            </div>
+            <button class="btn warn btnDel" title="Remove player"
+              style="margin-left:auto;font-size:11px;line-height:1;padding:4px 8px;border-radius:8px">×</button>
+          `;
+
           if(used.has(p.id)) card.style.opacity = .45;
+
           card.addEventListener('dragstart', onDragPlayer);
+
+          const delBtn = card.querySelector('.btnDel');
+          delBtn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            e.preventDefault();
+            const name = playerDisplayName(p);
+            if (confirm(`Remove ${name} from the roster and from any groups?`)) {
+              removePlayerEverywhere(p.id);
+            }
+          });
+
           elPlayers.appendChild(card);
         });
     }
