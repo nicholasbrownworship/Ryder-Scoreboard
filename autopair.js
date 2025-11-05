@@ -1,4 +1,4 @@
-/* autopair.js (defensive + auto-sanitize + reset button)
+/* autopair.js (defensive + auto-sanitize + reset button + singles=2 matches)
  * Requires your page to define: state, save(), renderAll()
  * Optional globals: TEAM_FORMATS (Set), desiredGroupSize(fmt)
  */
@@ -17,6 +17,8 @@
       ? window.TEAM_FORMATS
       : new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
 
+  // Fallback: if the page didn't define desiredGroupSize, default to 4 for team,
+  // 2 for singles. (Your page should override to 4 for singles to show 2 matches.)
   const desiredGroupSize =
     typeof window.desiredGroupSize === 'function'
       ? window.desiredGroupSize
@@ -125,18 +127,29 @@
     return { assignments, shortA, shortB };
   }
 
+  // Singles = two 1v1 matches per group -> 4 slots per group:
+  // positions (0 vs 1) and (2 vs 3)
   function buildAssignmentsSingles(ozIds, vaIds, groupsCount, options){
     const seed = options.seed ?? null;
     const A = shuffle(ozIds, seed);
     const B = shuffle(vaIds, seed!=null ? Number(seed)+1 : null);
 
-    const assignments = Array.from({length: groupsCount}, ()=> [null,null]);
+    const assignments = Array.from({length: groupsCount}, ()=> [null,null,null,null]);
+
     let i=0, j=0;
     for(let g=0; g<groupsCount; g++){
+      // Match 1
       assignments[g][0] = A[i] ?? null; if (A[i] != null) i++;
       assignments[g][1] = B[j] ?? null; if (B[j] != null) j++;
+      // Match 2
+      assignments[g][2] = A[i] ?? null; if (A[i] != null) i++;
+      assignments[g][3] = B[j] ?? null; if (B[j] != null) j++;
     }
-    return { assignments, shortOz: Math.max(0, groupsCount - i), shortVa: Math.max(0, groupsCount - j) };
+
+    const needPerSide = groupsCount * 2; // two OZ + two VA per group across two matches
+    const shortOz = Math.max(0, needPerSide - i);
+    const shortVa = Math.max(0, needPerSide - j);
+    return { assignments, shortOz, shortVa };
   }
 
   // ---------- Apply ----------
@@ -192,12 +205,14 @@
         if (res.shortB) msgs.push(`Valley short by ${res.shortB} slot(s) on ${labelRound(day,side)}.`);
         if (msgs.length) alert(msgs.join("\n"));
       } else {
-        const res = buildAssignmentsSingles(oz, va, Math.max(1, Number(state.numGroups)||1), options);
+        // Singles: need 2 OZ and 2 VA per group to make two 1v1 matches
+        const groupsCount = Math.max(1, Number(state.numGroups)||1);
+        const res = buildAssignmentsSingles(oz, va, groupsCount, options);
         applyAssignments(day, side, res.assignments, { fillMode });
-        const need = Math.max(1, Number(state.numGroups)||1);
+        const needPerSide = groupsCount * 2;
         const msgs = [];
-        if (oz.length < need) msgs.push(`Ozark has only ${oz.length} available for singles on ${labelRound(day,side)} (need ${need}).`);
-        if (va.length < need) msgs.push(`Valley has only ${va.length} available for singles on ${labelRound(day,side)} (need ${need}).`);
+        if (oz.length < needPerSide) msgs.push(`Ozark has only ${oz.length} available for singles on ${labelRound(day,side)} (need ${needPerSide}).`);
+        if (va.length < needPerSide) msgs.push(`Valley has only ${va.length} available for singles on ${labelRound(day,side)} (need ${needPerSide}).`);
         if (msgs.length) alert(msgs.join("\n"));
       }
 
