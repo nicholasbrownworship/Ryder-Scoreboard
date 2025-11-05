@@ -473,10 +473,24 @@ function desiredGroupSize(fmt){ return 4; }
           colB.appendChild(buildSlot(day, side, idx, 3, group[3]));
           slotsWrap.appendChild(colA);
           slotsWrap.appendChild(colB);
-        }else{
-          slotsWrap.appendChild(buildSlot(day, side, idx, 0, group[0]));
-          slotsWrap.appendChild(buildSlot(day, side, idx, 1, group[1]));
-        }
+       }else{
+  // Singles = two separate 1v1 matches per group
+  slotsWrap.appendChild(buildSlot(day, side, idx, 0, group[0]));
+  slotsWrap.appendChild(buildSlot(day, side, idx, 1, group[1]));
+
+  // separator line between the two matches
+  const sep = document.createElement('div');
+  sep.style.gridColumn = '1 / -1';
+  sep.style.height = '6px';
+  sep.style.borderTop = '1px dashed #2a3a3d';
+  sep.style.opacity = '0.4';
+  sep.style.margin = '4px 0';
+  slotsWrap.appendChild(sep);
+
+  slotsWrap.appendChild(buildSlot(day, side, idx, 2, group[2]));
+  slotsWrap.appendChild(buildSlot(day, side, idx, 3, group[3]));
+}
+
 
         card.appendChild(slotsWrap);
         elGrid.appendChild(card);
@@ -626,8 +640,22 @@ function desiredGroupSize(fmt){ return 4; }
                 else if(!(oz===2 && va===2)) problems.push(`${printSide(day,side)} Group ${i+1}: must be 2 OZ + 2 VA (now ${oz}/${va})`);
               }
             }else{
-              if(players.length>0 && players.length!==2) problems.push(`${printSide(day,side)} Group ${i+1}: singles must be 1v1 (2 players)`);
-            }
+  // Singles = two 1v1 matches: (0 vs 1) and (2 vs 3)
+  const pairIdx = [[0,1],[2,3]];
+  pairIdx.forEach((pair, pi)=>{
+    const ids = pair.map(pos => (Array.isArray(g)?g[pos]:null)).filter(Boolean);
+    if (ids.length === 0) return;
+    if (ids.length !== 2) {
+      problems.push(`${printSide(day,side)} Group ${i+1} Match ${pi+1}: needs exactly 2 players (1v1).`);
+      return;
+    }
+    const pA = findPlayer(ids[0]), pB = findPlayer(ids[1]);
+    if (!pA || !pB || pA.team === pB.team) {
+      problems.push(`${printSide(day,side)} Group ${i+1} Match ${pi+1}: must be OZ vs VA.`);
+    }
+  });
+}
+
           });
         });
       });
@@ -680,9 +708,20 @@ function desiredGroupSize(fmt){ return 4; }
               const b = g.slice(2,4).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
               return `<tr><td>${i+1}</td><td>${fmt}</td><td><div class="teams"><div class="box"><strong>Team A</strong><br/>${a}</div><div class="box"><strong>Team B</strong><br/>${b}</div></div></td></tr>`;
             }else{
-              const names = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
-              return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names}</td></tr>`;
-            }
+  // two 1v1 matches: (0 vs 1) and (2 vs 3)
+  const mkName = (pid) => {
+    if (!pid) return '';
+    const p = findPlayer(pid);
+    return p ? `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>` : '';
+  };
+  const a1 = mkName(g[0]), b1 = mkName(g[1]);
+  const a2 = mkName(g[2]), b2 = mkName(g[3]);
+  const line1 = (a1 || b1) ? `Match 1: ${a1 || '&nbsp;'} <strong>vs</strong> ${b1 || '&nbsp;'}` : '';
+  const line2 = (a2 || b2) ? `Match 2: ${a2 || '&nbsp;'} <strong>vs</strong> ${b2 || '&nbsp;'}` : '';
+  const names = [line1, line2].filter(Boolean).join('<br/>');
+  return `<tr><td>${i+1}</td><td>${fmt}</td><td>${names || '&nbsp;'}</td></tr>`;
+}
+
           }).join('');
           return `<div class="sheet"><h2>${side==='front'?'Front 9':'Back 9'} • ${fmt}</h2><table><thead><tr><th>#</th><th>Format</th><th>Players</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         };
