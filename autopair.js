@@ -1,4 +1,4 @@
-/* autopair.js (defensive)
+/* autopair.js (defensive + auto-sanitize)
  * Requires your page to define: state, save(), renderAll()
  * Optional globals: TEAM_FORMATS (Set), desiredGroupSize(fmt)
  */
@@ -21,6 +21,38 @@
     typeof window.desiredGroupSize === 'function'
       ? window.desiredGroupSize
       : (fmt => TEAM_FORMATS.has(fmt) ? 4 : 2);
+
+  // ---------- State sanitizer ----------
+  function sanitizeGroupsState() {
+    // Ensure object shape
+    if (!state.groups || typeof state.groups !== 'object') {
+      state.groups = { day1:{front:[],back:[]}, day2:{front:[],back:[]} };
+    }
+    if (!state.groups.day1 || typeof state.groups.day1 !== 'object') state.groups.day1 = { front:[], back:[] };
+    if (!state.groups.day2 || typeof state.groups.day2 !== 'object') state.groups.day2 = { front:[], back:[] };
+
+    // Ensure arrays
+    ['day1','day2'].forEach(day=>{
+      ['front','back'].forEach(side=>{
+        if (!Array.isArray(state.groups[day][side])) {
+          state.groups[day][side] = [];
+        }
+      });
+    });
+
+    // Do not force sizes here; your main code's initGroupsIfNeeded() handles that.
+    return state.groups;
+  }
+
+  // Wrap renderAll so it always sanitizes first
+  if (typeof window.renderAll === 'function' && !window.__renderAllWrapped) {
+    const _renderAll = window.renderAll;
+    window.renderAll = function wrappedRenderAll() {
+      try { sanitizeGroupsState(); } catch (e) { console.warn('[autopair] sanitize before renderAll failed', e); }
+      return _renderAll.apply(this, arguments);
+    };
+    window.__renderAllWrapped = true;
+  }
 
   // ---------- Utilities ----------
   function findPlayer(id){ return (state.players||[]).find(p=>p.id===id); }
@@ -49,8 +81,7 @@
 
   // ---------- Safe group ensure ----------
   function ensureSide(day, side, fmt){
-    state.groups = state.groups || {};
-    state.groups[day] = state.groups[day] || {};
+    sanitizeGroupsState(); // make sure the container exists & arrays are arrays
     const gs = desiredGroupSize(fmt);
     const count = Math.max(1, Number(state.numGroups)||1);
     let arr = state.groups[day][side];
@@ -141,6 +172,7 @@
   // ---------- Public API ----------
   function autoPairRound(day, side, options={}){
     try {
+      sanitizeGroupsState();
       const fmt = (state.format?.[day]?.[side]) || 'Best Ball';
       // Always ensure the side exists & slot counts match current format:
       ensureSide(day, side, fmt);
@@ -222,8 +254,11 @@
   }
 
   // expose for debugging
-  window.__autoPair = { autoPairRound, autoPairDay, autoPairAll };
+  window.__autoPair = { autoPairRound, autoPairDay, autoPairAll, __sanitize: sanitizeGroupsState };
 
-  // startup ping
-  try { console.log('[autopair] ready', { hasState: !!window.state, TEAM_FORMATS: TEAM_FORMATS ? [...TEAM_FORMATS] : null }); } catch {}
+  // startup ping + first sanitize (helps even if renderAll already ran once)
+  try {
+    sanitizeGroupsState();
+    console.log('[autopair] ready', { hasState: !!window.state, TEAM_FORMATS: TEAM_FORMATS ? [...TEAM_FORMATS] : null });
+  } catch {}
 })();
