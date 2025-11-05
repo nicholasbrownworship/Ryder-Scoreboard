@@ -266,8 +266,9 @@
       });
     }
 
-    // Desired group size (exposed for autopair.js fallback to reuse)
-    function desiredGroupSize(fmt){ return window.TEAM_FORMATS.has(fmt) ? 4 : 2; }
+    // Always 4 slots per group so Singles can show two 1v1 matches
+function desiredGroupSize(fmt){ return 4; }
+
     window.desiredGroupSize = desiredGroupSize;
 
     function loadPlayersFromPreviousSite(){
