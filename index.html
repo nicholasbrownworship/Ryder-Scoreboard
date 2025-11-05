@@ -79,7 +79,6 @@
       .printable{display:block;border:none;box-shadow:none}
     }
 
-    /* Leaderboard polish */
     body, table { font-variant-numeric: tabular-nums; }
     header { border-radius: 16px; border-top: 2px solid #2b3b3e; box-shadow: 0 12px 40px var(--shadow), inset 0 1px 0 #1a2324; }
     header h1 { letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
@@ -160,27 +159,27 @@
             </div>
           </div>
           <div class="row">
-  <label>Format</label>
-  <select id="formatSelect">
-    <option value="Best Ball">Best Ball (4-Ball)</option>
-    <option value="Scramble">Scramble</option>
-    <option value="Alt Shot">Alternate Shot</option>
-    <option value="Singles">Singles Match Play</option>
-  </select>
-  <button id="btnClearSide" class="btn warn">Clear side</button>
+            <label>Format</label>
+            <select id="formatSelect">
+              <option value="Best Ball">Best Ball (4-Ball)</option>
+              <option value="Scramble">Scramble</option>
+              <option value="Alt Shot">Alternate Shot</option>
+              <option value="Singles">Singles Match Play</option>
+            </select>
+            <button id="btnClearSide" class="btn warn">Clear side</button>
 
-  <!-- Auto-pair controls -->
-  <label style="margin-left:10px">Auto-pair:</label>
-  <button id="btnAutoPairRound" class="btn">This round</button>
-  <button id="btnAutoPairDay" class="btn">Both rounds (this day)</button>
-  <button id="btnAutoPairAll" class="btn">All rounds (D1 & D2)</button>
+            <!-- Auto-pair controls -->
+            <label style="margin-left:10px">Auto-pair:</label>
+            <button id="btnAutoPairRound" class="btn">This round</button>
+            <button id="btnAutoPairDay" class="btn">Both rounds (this day)</button>
+            <button id="btnAutoPairAll" class="btn">All rounds (D1 & D2)</button>
 
-  <label class="row" style="gap:6px;margin-left:10px">
-    <input id="chkFillUnassigned" type="checkbox" />
-    Fill unassigned only
-  </label>
-</div>
-
+            <label class="row" style="gap:6px;margin-left:10px">
+              <input id="chkFillUnassigned" type="checkbox" />
+              Fill unassigned only
+            </label>
+          </div>
+        </div>
 
         <div id="grid" class="grid" aria-live="polite"></div>
       </div>
@@ -228,14 +227,14 @@
     const STORAGE_KEY = "ozarkPairings_v3_twoDays";
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
-    const TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
+    window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']); // expose for autopair.js
 
     // State now includes two days
     let state = {
       players: [],
       filters: { team: "all", q: "" },
-      currentDay: "day1", // 'day1' | 'day2'
-      side: "front",      // 'front' | 'back'
+      currentDay: "day1",
+      side: "front",
       eventName: "Ozark Invitational 2026",
       dates: { day1: "2026-06-20", day2: "2026-06-21" },
       format: {
@@ -243,7 +242,7 @@
         day2: { front: "Alt Shot",  back: "Singles"  }
       },
       groups: {
-        day1: { front: [], back: [] }, // array of groups -> array of player ids
+        day1: { front: [], back: [] },
         day2: { front: [], back: [] }
       },
       numGroups: 6
@@ -252,6 +251,24 @@
     function uid(){ return Math.random().toString(36).slice(2,9) }
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
     function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); if(r){ state = JSON.parse(r); } }catch{} }
+
+    // --- Safety: coerce groups into proper shape BEFORE first render ---
+    function sanitizeGroups() {
+      if (!state.groups || typeof state.groups !== 'object') {
+        state.groups = { day1: { front: [], back: [] }, day2: { front: [], back: [] } };
+      }
+      if (!state.groups.day1 || typeof state.groups.day1 !== 'object') state.groups.day1 = { front: [], back: [] };
+      if (!state.groups.day2 || typeof state.groups.day2 !== 'object') state.groups.day2 = { front: [], back: [] };
+      ['day1','day2'].forEach(day=>{
+        ['front','back'].forEach(side=>{
+          if (!Array.isArray(state.groups[day][side])) state.groups[day][side] = [];
+        });
+      });
+    }
+
+    // Desired group size (exposed for autopair.js fallback to reuse)
+    function desiredGroupSize(fmt){ return window.TEAM_FORMATS.has(fmt) ? 4 : 2; }
+    window.desiredGroupSize = desiredGroupSize;
 
     function loadPlayersFromPreviousSite(){
       try{
@@ -367,21 +384,17 @@
     const elDayTabs= document.getElementById('dayTabs');
     const elFormat = document.getElementById('formatSelect');
 
-    function desiredGroupSize(fmt){ return TEAM_FORMATS.has(fmt) ? 4 : 2; }
-
     function initGroupsIfNeeded(){
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
           if(!Array.isArray(state.groups[day][side])) state.groups[day][side] = [];
-          // ensure numGroups
           if(state.groups[day][side].length !== state.numGroups){
             state.groups[day][side] = Array.from({length: state.numGroups}, (_,i)=> (state.groups[day][side][i]||[]));
           }
-          // ensure group arrays sized for current format
           const fmt = state.format[day][side];
           const gs = desiredGroupSize(fmt);
           state.groups[day][side] = state.groups[day][side].map(g=>{
-            const arr = g.slice(0, gs);
+            const arr = (Array.isArray(g) ? g : []).slice(0, gs);
             while (arr.length < gs) arr.push(null);
             return arr;
           });
@@ -395,7 +408,7 @@
       const day = state.currentDay;
       const side = state.side;
       const fmt = state.format[day][side];
-      const isTeam = TEAM_FORMATS.has(fmt);
+      const isTeam = window.TEAM_FORMATS.has(fmt);
 
       state.groups[day][side].forEach((group, idx)=>{
         const card = document.createElement('div');
@@ -430,7 +443,6 @@
         card.appendChild(slotsWrap);
         elGrid.appendChild(card);
       });
-      // reflect format control for current day/side
       elFormat.value = fmt;
     }
 
@@ -467,7 +479,6 @@
 
     function assignPlayerToSlot(day, side, groupIndex, pos, playerId){
       initGroupsIfNeeded();
-      // remove any existing placement for this player on this day+side
       for(const g of state.groups[day][side]){ for(let i=0;i<g.length;i++){ if(g[i]===playerId){ g[i]=null; } } }
       state.groups[day][side][groupIndex][pos] = playerId;
       save(); renderAll();
@@ -501,11 +512,10 @@
 
     elFormat.addEventListener('change', (e)=>{
       state.format[state.currentDay][state.side] = e.target.value;
-      // adjust group lengths for this side/day to match format size
       const gs = desiredGroupSize(e.target.value);
       state.groups[state.currentDay][state.side] =
         state.groups[state.currentDay][state.side].map(g=>{
-          const a = g.slice(0, gs);
+          const a = (Array.isArray(g)?g:[]).slice(0, gs);
           while (a.length < gs) a.push(null);
           return a;
         });
@@ -528,14 +538,19 @@
     const elAssignTable = document.getElementById('assignmentTable');
 
     function renderAssignmentsTable(){
+      // Guard against bad shapes so forEach never throws
+      sanitizeGroups();
+
       const used = {
         day1: { front:new Map(), back:new Map() },
         day2: { front:new Map(), back:new Map() },
       };
-      (state.groups.day1.front||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day1.front.set(pid, i+1) }))
-      (state.groups.day1.back ||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day1.back.set(pid, i+1) }))
-      (state.groups.day2.front||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day2.front.set(pid, i+1) }))
-      (state.groups.day2.back ||[]).forEach((g,i)=> g.forEach(pid=>{ if(pid) used.day2.back.set(pid, i+1) }))
+      const gf = a => Array.isArray(a) ? a : [];
+
+      gf(state.groups.day1.front).forEach((g,i)=> gf(g).forEach(pid=>{ if(pid) used.day1.front.set(pid, i+1) }));
+      gf(state.groups.day1.back ).forEach((g,i)=> gf(g).forEach(pid=>{ if(pid) used.day1.back .set(pid, i+1) }));
+      gf(state.groups.day2.front).forEach((g,i)=> gf(g).forEach(pid=>{ if(pid) used.day2.front.set(pid, i+1) }));
+      gf(state.groups.day2.back ).forEach((g,i)=> gf(g).forEach(pid=>{ if(pid) used.day2.back .set(pid, i+1) }));
 
       const rows = state.players.map(p=>{
         const tr = document.createElement('tr');
@@ -551,7 +566,6 @@
 
       const problems = [];
 
-      // once per side per day
       ['day1','day2'].forEach(day=>{
         const label = day==='day1'?'Day 1':'Day 2';
         state.players.forEach(p=>{
@@ -560,13 +574,12 @@
         });
       });
 
-      // composition checks
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
           const fmt = state.format[day][side];
-          const isTeam = TEAM_FORMATS.has(fmt);
-          (state.groups[day][side]||[]).forEach((g,i)=>{
-            const players = g.filter(Boolean).map(findPlayer);
+          const isTeam = window.TEAM_FORMATS.has(fmt);
+          gf(state.groups[day][side]).forEach((g,i)=>{
+            const players = gf(g).filter(Boolean).map(findPlayer);
             if(isTeam){
               if(players.length>0){
                 const oz = players.filter(p=>p.team==='ozark').length;
@@ -622,7 +635,7 @@
         const title = (day==='day1'?'Day 1':'Day 2') + (date ? ` • ${date}` : '');
         const sideBlock = (side)=>{
           const fmt = state.format[day][side];
-          const isTeam = TEAM_FORMATS.has(fmt);
+          const isTeam = window.TEAM_FORMATS.has(fmt);
           const rows = (state.groups[day][side]||[]).map((g,i)=>{
             if(isTeam){
               const a = g.slice(0,2).filter(Boolean).map(findPlayer).map(p=> `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>`).join('<br/>') || '&nbsp;';
@@ -817,7 +830,6 @@
         x.classList.toggle('active', x.dataset.side===state.side);
       });
 
-      // reflect current format.
       elFormat.value = state.format[state.currentDay][state.side] || 'Best Ball';
     }
 
@@ -829,14 +841,15 @@
       renderAssignmentsTable();
     }
 
-    // Boot
+    // Boot (sanitize BEFORE first render to prevent forEach crash)
     load();
     ensurePlayers();
+    sanitizeGroups();
     initGroupsIfNeeded();
     renderAll();
   </script>
 
+  <!-- Load autopair AFTER the inline script defines state/renderAll/save -->
   <script src="autopair.js"></script>
-
 </body>
 </html>
