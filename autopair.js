@@ -1,4 +1,4 @@
-/* autopair.js (defensive + auto-sanitize)
+/* autopair.js (defensive + auto-sanitize + reset button)
  * Requires your page to define: state, save(), renderAll()
  * Optional globals: TEAM_FORMATS (Set), desiredGroupSize(fmt)
  */
@@ -24,23 +24,16 @@
 
   // ---------- State sanitizer ----------
   function sanitizeGroupsState() {
-    // Ensure object shape
     if (!state.groups || typeof state.groups !== 'object') {
       state.groups = { day1:{front:[],back:[]}, day2:{front:[],back:[]} };
     }
     if (!state.groups.day1 || typeof state.groups.day1 !== 'object') state.groups.day1 = { front:[], back:[] };
     if (!state.groups.day2 || typeof state.groups.day2 !== 'object') state.groups.day2 = { front:[], back:[] };
-
-    // Ensure arrays
     ['day1','day2'].forEach(day=>{
       ['front','back'].forEach(side=>{
-        if (!Array.isArray(state.groups[day][side])) {
-          state.groups[day][side] = [];
-        }
+        if (!Array.isArray(state.groups[day][side])) state.groups[day][side] = [];
       });
     });
-
-    // Do not force sizes here; your main code's initGroupsIfNeeded() handles that.
     return state.groups;
   }
 
@@ -81,7 +74,7 @@
 
   // ---------- Safe group ensure ----------
   function ensureSide(day, side, fmt){
-    sanitizeGroupsState(); // make sure the container exists & arrays are arrays
+    sanitizeGroupsState();
     const gs = desiredGroupSize(fmt);
     const count = Math.max(1, Number(state.numGroups)||1);
     let arr = state.groups[day][side];
@@ -102,7 +95,7 @@
     const placed = new Set((state.groups?.[day]?.[side]||[]).flat().filter(Boolean));
     const oz = [], va = [];
     for(const p of state.players||[]){
-      if (placed.has(p.id)) continue; // one use per side per day
+      if (placed.has(p.id)) continue;
       (p.team === 'valley' ? va : oz).push(p.id);
     }
     return { oz, va };
@@ -174,7 +167,6 @@
     try {
       sanitizeGroupsState();
       const fmt = (state.format?.[day]?.[side]) || 'Best Ball';
-      // Always ensure the side exists & slot counts match current format:
       ensureSide(day, side, fmt);
 
       const gs  = desiredGroupSize(fmt);
@@ -185,7 +177,6 @@
         (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite');
 
       if (fillMode === 'overwrite') {
-        // reset side cleanly to correct shape
         state.groups[day][side] = Array.from({length: Math.max(1, Number(state.numGroups)||1)}, ()=> Array(gs).fill(null));
       }
 
@@ -221,6 +212,21 @@
   function autoPairDay(day, options={}){ autoPairRound(day, 'front', options); autoPairRound(day, 'back', options); }
   function autoPairAll(options={}){ autoPairDay('day1', options); autoPairDay('day2', options); }
 
+  // ---------- Reset helper (all rounds, both days) ----------
+  function resetAllGroups() {
+    sanitizeGroupsState();
+    const days  = ['day1','day2'];
+    const sides = ['front','back'];
+    const count = Math.max(1, Number(state.numGroups) || 1);
+    days.forEach(day => {
+      sides.forEach(side => {
+        const fmt = (state.format?.[day]?.[side]) || 'Best Ball';
+        const gs  = typeof desiredGroupSize === 'function' ? desiredGroupSize(fmt) : 4;
+        state.groups[day][side] = Array.from({ length: count }, () => Array(gs).fill(null));
+      });
+    });
+  }
+
   // ---------- Wire buttons ----------
   function wireButtons(){
     const btnRound = document.getElementById('btnAutoPairRound');
@@ -245,6 +251,25 @@
         fillMode: (document.getElementById('chkFillUnassigned')?.checked ? 'unassigned' : 'overwrite')
       });
     });
+
+    // Inject "Reset all groups" next to Clear side
+    const btnClearSide = document.getElementById('btnClearSide');
+    if (btnClearSide && !document.getElementById('btnResetGroups')) {
+      const btnReset = document.createElement('button');
+      btnReset.id = 'btnResetGroups';
+      btnReset.className = 'btn warn';
+      btnReset.style.marginLeft = '6px';
+      btnReset.textContent = 'Reset all groups';
+      btnClearSide.insertAdjacentElement('afterend', btnReset);
+
+      btnReset.addEventListener('click', ()=>{
+        if (!confirm('Reset ALL groups (Day 1 & Day 2, Front & Back) to empty slots?')) return;
+        resetAllGroups();
+        if (typeof save === 'function') save();
+        if (typeof renderAll === 'function') renderAll();
+        alert('All groups reset.');
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -254,9 +279,9 @@
   }
 
   // expose for debugging
-  window.__autoPair = { autoPairRound, autoPairDay, autoPairAll, __sanitize: sanitizeGroupsState };
+  window.__autoPair = { autoPairRound, autoPairDay, autoPairAll, __sanitize: sanitizeGroupsState, resetAllGroups };
 
-  // startup ping + first sanitize (helps even if renderAll already ran once)
+  // startup ping + first sanitize
   try {
     sanitizeGroupsState();
     console.log('[autopair] ready', { hasState: !!window.state, TEAM_FORMATS: TEAM_FORMATS ? [...TEAM_FORMATS] : null });
