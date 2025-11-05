@@ -1030,6 +1030,244 @@
     });
 
     /*********************************
+ *  Shuffle / Auto-balance / Reset
+ *********************************/
+
+// Utility
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function randShuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// Build assignment arrays for one side based on format
+function assignForSide(fmt, players, existingGroups, fillOnly){
+  const isTeam = window.TEAM_FORMATS.has(fmt);
+  const groups = existingGroups.map(g => g.slice()); // shallow copy
+  const slotsPerGroup = 4;
+
+  // Compute which positions are empty if fillOnly
+  const empties = [];
+  if (fillOnly){
+    groups.forEach((g, gi)=>{
+      g.forEach((pid, pos)=>{
+        if (!pid) empties.push({gi, pos});
+      });
+    });
+  }
+
+  // Create candidate player queues (by team) excluding already placed if fillOnly
+  const placed = new Set(groups.flat().filter(Boolean));
+  const roster = (state.players || []).map(p => p.id).filter(id => !fillOnly || !placed.has(id));
+  const oz = roster.filter(id => (findPlayer(id)?.team === 'ozark'));
+  const va = roster.filter(id => (findPlayer(id)?.team === 'valley'));
+
+  // Randomize
+  let ozQ = randShuffle(oz);
+  let vaQ = randShuffle(va);
+
+  function nextOz(){ return ozQ.length ? ozQ.pop() : null; }
+  function nextVa(){ return vaQ.length ? vaQ.pop() : null; }
+
+  if (isTeam){
+    // Fill groups aiming for 2 OZ + 2 VA
+    const targets = fillOnly ? empties : groups.flatMap((_,gi)=>[0,1,2,3].map(pos=>({gi,pos})));
+
+    for (const t of targets){
+      if (groups[t.gi][t.pos]) continue; // already filled
+      // Count current team presence in this group
+      const g = groups[t.gi];
+      const ozCnt = g.map(pid=>findPlayer(pid)?.team).filter(x=>x==='ozark').length;
+      const vaCnt = g.map(pid=>findPlayer(pid)?.team).filter(x=>x==='valley').length;
+
+      // Prefer the team that brings us closer to 2/2
+      let pid = null;
+      if (ozCnt < 2 && vaCnt < 2){
+        // either works—alternate a bit
+        pid = (ozCnt <= vaCnt) ? nextOz() : nextVa();
+        if (!pid) pid = nextOz() || nextVa();
+      } else if (ozCnt < 2){
+        pid = nextOz() || nextVa();
+      } else if (vaCnt < 2){
+        pid = nextVa() || nextOz();
+      } else {
+        pid = nextOz() || nextVa(); // overflow if balanced already
+      }
+      if (pid) groups[t.gi][t.pos] = pid;
+    }
+  } else {
+    // Singles: two matches per group: (0 vs 1), (2 vs 3)
+    const matchPositions = [[0,1],[2,3]];
+    const targets = fillOnly
+      ? empties
+      : groups.flatMap((_,gi)=>[0,1,2,3].map(pos=>({gi,pos})));
+
+    for (const t of targets){
+      if (groups[t.gi][t.pos]) continue;
+      // determine desired team for this position to achieve OZ vs VA
+      const matchIndex = (t.pos <= 1) ? 0 : 1;
+      const matePos = (t.pos % 2 === 0) ? t.pos+1 : t.pos-1;
+      const mateId = groups[t.gi][matePos];
+      let pid = null;
+
+      if (mateId){
+        const mateTeam = findPlayer(mateId)?.team;
+        pid = (mateTeam === 'ozark') ? nextVa() : nextOz();
+        if (!pid) pid = nextOz() || nextVa();
+      } else {
+        // choose any, let mate pick the opposite later
+        pid = (ozQ.length >= vaQ.length) ? nextOz() : nextVa();
+        if (!pid) pid = nextOz() || nextVa();
+      }
+      if (pid) groups[t.gi][t.pos] = pid;
+    }
+  }
+  return groups;
+}
+
+function shuffleAll(){
+  const fillOnly = !!document.getElementById('chkFillUnassigned')?.checked;
+
+  ['day1','day2'].forEach(day=>{
+    ['front','back'].forEach(side=>{
+      const fmt = state.format[day][side];
+      const gs = desiredGroupSize(fmt);
+      // Ensure shape
+      if (!Array.isArray(state.groups[day][side]) || state.groups[day][side].length !== state.numGroups){
+        state.groups[day][side] = Array.from({length: state.numGroups}, ()=> Array(gs).fill(null));
+      } else {
+        state.groups[day][side] = state.groups[day][side].map(g=>{
+          const a = (Array.isArray(g)?g:[]).slice(0, gs);
+          while (a.length < gs) a.push(null);
+          return a;
+        });
+      }
+      // Assign
+      state.groups[day][side] = assignForSide(fmt, state.players, state.groups[day][side], fillOnly);
+    });
+  });
+  save(); renderAll();
+}
+
+function autoBalanceAll(){
+  const swapBetween = (arrA, arrB, condA, condB) => {
+    // Greedy single swap to reduce imbalance
+    for (let i=0;i<arrA.length;i++){
+      for (let j=0;j<arrB.length;j++){
+        const a = arrA[i], b = arrB[j];
+        if (!a || !b) continue;
+        if (condA(a) && condB(b)){
+          [arrA[i], arrB[j]] = [b, a];
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  ['day1','day2'].forEach(day=>{
+    ['front','back'].forEach(side=>{
+      const fmt = state.format[day][side];
+      const isTeam = window.TEAM_FORMATS.has(fmt);
+      const groups = state.groups[day][side] || [];
+
+      if (isTeam){
+        // Aim for 2 OZ + 2 VA per group
+        const oz = pid => findPlayer(pid)?.team === 'ozark';
+        const va = pid => findPlayer(pid)?.team === 'valley';
+
+        // Keep trying passes until stable or limited iterations
+        for (let pass=0; pass<6; pass++){
+          let changed = false;
+          for (let g1=0; g1<groups.length; g1++){
+            for (let g2=g1+1; g2<groups.length; g2++){
+              const A = groups[g1], B = groups[g2];
+              const ozA = A.filter(Boolean).filter(oz).length;
+              const vaA = A.filter(Boolean).filter(va).length;
+              const ozB = B.filter(Boolean).filter(oz).length;
+              const vaB = B.filter(Boolean).filter(va).length;
+
+              // Too many OZ in A and too many VA in B → swap OZ from A with VA from B
+              if (ozA > 2 && vaB > 2) changed = swapBetween(A, B, oz, va) || changed;
+              // Too many VA in A and too many OZ in B → swap VA from A with OZ from B
+              if (vaA > 2 && ozB > 2) changed = swapBetween(A, B, va, oz) || changed;
+            }
+          }
+          if (!changed) break;
+        }
+      } else {
+        // Singles: ensure each match is OZ vs VA
+        groups.forEach(g=>{
+          const pairs = [[0,1],[2,3]];
+          pairs.forEach(([a,b])=>{
+            const A = g[a], B = g[b];
+            if (!A || !B) return;
+            const tA = findPlayer(A)?.team, tB = findPlayer(B)?.team;
+            if (tA && tB && tA === tB){
+              // Try to swap B with someone else in other groups to get opposite team
+              for (let gi=0; gi<groups.length; gi++){
+                const gg = groups[gi];
+                for (let k=0;k<gg.length;k++){
+                  if (gg === g && (k===a || k===b)) continue;
+                  const C = gg[k];
+                  if (!C) continue;
+                  const tC = findPlayer(C)?.team;
+                  if (tC && tC !== tA){
+                    [g[b], gg[k]] = [C, B];
+                    return;
+                  }
+                }
+              }
+            }
+          });
+        });
+      }
+    });
+  });
+  save(); renderAll();
+}
+
+// Buttons
+document.getElementById('btnShuffle').addEventListener('click', ()=>{
+  if(!confirm('Shuffle all groups across Day 1 & Day 2? (Respects “Fill unassigned only” if checked.)')) return;
+  shuffleAll();
+});
+
+document.getElementById('pillAutoBalance').addEventListener('click', ()=>{
+  if(!confirm('Auto-balance teams across all groups (no handicaps)?')) return;
+  autoBalanceAll();
+});
+
+document.getElementById('btnResetAll').addEventListener('click', ()=>{
+  if(!confirm('Reset ALL players and pairings? This removes the entire roster and clears Day 1 & Day 2.')) return;
+
+  // wipe roster
+  state.players = [];
+
+  // wipe groups
+  ['day1','day2'].forEach(day=>{
+    ['front','back'].forEach(side=>{
+      const gs = desiredGroupSize(state.format[day][side]);
+      state.groups[day][side] = Array.from({length: state.numGroups}, ()=> Array(gs).fill(null));
+    });
+  });
+
+  save(); renderAll();
+
+  // optional: also clear previous-site signups cache
+  if(confirm('Also clear the previous-site signups cache? (This is the "'+SIGNUPS_KEY+'" localStorage key.)')){
+    try { localStorage.removeItem(SIGNUPS_KEY); } catch {}
+    alert('Roster, pairings, and signups cache cleared.');
+  } else {
+    alert('Roster and pairings cleared.');
+  }
+});
+
+    /*********************************
      *  5) UI HYDRATE + RENDER ALL
      *********************************/
     function hydrateControls(){
