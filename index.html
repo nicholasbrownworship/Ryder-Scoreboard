@@ -96,9 +96,10 @@
       <div style="margin-left:auto" class="row">
         <button id="btnPrint" class="btn primary">Print / PDF</button>
         <button id="btnExport" class="btn">Export JSON</button>
-        <button id="btnImportCSV" class="btn">Import CSV (players)</button>
-        <button id="btnImportPlayers" class="btn">Import Players (merge)</button>
-        <button id="btnImportState" class="btn">Import State (replace)</button>
+       <button id="btnImportCSV" class="btn">Import CSV (players)</button>
+      <button id="btnShuffle" class="btn">Shuffle Groups</button>
+      <button id="btnResetAll" class="btn warn">Reset All</button>
+
       </div>
     </header>
 
@@ -190,9 +191,11 @@
       <div class="head"><h2>Leaderboard &amp; Schedule</h2></div>
       <div class="body">
         <div class="row">
-          <div class="pill" id="pillOnce">Validate: each player used once per side</div>
-          <div class="pill" id="pillBalance">Validate: team composition</div>
-        </div>
+  <div class="pill" id="pillOnce">Validate: each player used once per side</div>
+  <div class="pill" id="pillBalance">Validate: team composition</div>
+  <div class="pill" id="pillAutoBalance">Auto-Balance (teams)</div>
+</div>
+
         <div id="alerts"></div>
 
         <div class="list" aria-label="Assignments table">
