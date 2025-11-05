@@ -688,23 +688,26 @@ function buildPrint(){
     <style>
       @page {
         size: Letter portrait;
-        margin: 0.5in;
+        margin: 0.35in; /* tighter margins so content can breathe */
       }
+
+      /* Nuke any layout constraints/padding from the app when printing this area */
+      .printable { padding: 0 !important; }
+      .page { page-break-after: always; width: 100%; }
+      .page:last-child { page-break-after: auto; }
+
       * { box-sizing: border-box; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-      .page { page-break-after: always; }
-      .page:last-child { page-break-after: auto; }
-
       .title {
-        margin: 0 0 8px 0;
-        font-size: 20px;
-        font-weight: 700;
+        margin: 0 0 10px 0;
+        font-size: 22px;
+        font-weight: 800;
       }
       .day-header {
         font-size: 16px;
         font-weight: 700;
-        margin: 6px 0 10px;
+        margin: 0 0 10px 0;
       }
 
       .sheet {
@@ -714,21 +717,23 @@ function buildPrint(){
         border-radius: 8px;
         page-break-inside: avoid;
         background: #fff;
+        width: 100%;
       }
       .sheet h2 {
-        margin: 0 0 6px 0;
+        margin: 0 0 8px 0;
         font-size: 15px;
       }
 
+      /* Full-width tables with natural column sizing */
       table.print {
         width: 100%;
         border-collapse: collapse;
-        table-layout: fixed; /* keeps cells inside page width */
-        font-size: 11px;
+        table-layout: auto;   /* let columns expand to fill the page */
+        font-size: 12px;      /* slightly larger for readability */
       }
       .print th, .print td {
         border: 1px solid #999;
-        padding: 6px;
+        padding: 7px 8px;
         vertical-align: top;
         word-wrap: break-word;
         overflow-wrap: anywhere;
@@ -739,11 +744,16 @@ function buildPrint(){
         font-weight: 700;
       }
 
+      /* Give first two columns *minimums* but allow them to grow as needed */
+      .col-num    { min-width: 36px; text-align: center; }
+      .col-format { min-width: 110px; }
+      .col-players{ width: auto; } /* takes the rest */
+
       .muted { color: #555; }
       .match-line { margin: 2px 0; }
       .vs { font-weight: 700; padding: 0 4px; }
 
-      /* Avoid splitting the Front/Back blocks mid-table */
+      /* Avoid splitting Front/Back sections mid-table */
       .side-wrap { page-break-inside: avoid; }
     </style>`;
 
@@ -771,10 +781,10 @@ function buildPrint(){
           .join('<br/>') || '&nbsp;';
         return `
           <tr>
-            <td style="width:40px">${i+1}</td>
-            <td style="width:120px">${fmt}</td>
-            <td>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <td class="col-num">${i+1}</td>
+            <td class="col-format">${fmt}</td>
+            <td class="col-players">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <div style="border:1px solid #bbb;padding:6px;border-radius:6px"><strong>Team A</strong><br/>${a}</div>
                 <div style="border:1px solid #bbb;padding:6px;border-radius:6px"><strong>Team B</strong><br/>${b}</div>
               </div>
@@ -789,9 +799,9 @@ function buildPrint(){
         const names = (line1 + line2) || '&nbsp;';
         return `
           <tr>
-            <td style="width:40px">${i+1}</td>
-            <td style="width:120px">${fmt}</td>
-            <td>${names}</td>
+            <td class="col-num">${i+1}</td>
+            <td class="col-format">${fmt}</td>
+            <td class="col-players">${names}</td>
           </tr>`;
       }
     }).join('');
@@ -802,7 +812,11 @@ function buildPrint(){
         <h2>${sideLabel} • ${fmt}</h2>
         <table class="print">
           <thead>
-            <tr><th style="width:40px">#</th><th style="width:120px">Format</th><th>Players</th></tr>
+            <tr>
+              <th class="col-num">#</th>
+              <th class="col-format">Format</th>
+              <th class="col-players">Players</th>
+            </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -821,7 +835,7 @@ function buildPrint(){
       </div>`;
   };
 
-  // Build clean pages (Day 1 / Day 2)
+  // Build clean, full-width pages (Day 1 / Day 2)
   elPrintContent.innerHTML = css + dayPage('day1') + dayPage('day2');
   elPrintArea.style.display = 'block';
 }
@@ -830,7 +844,6 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ozark_pairings_twodays.json'; a.click();
 });
-
 
     /*********************************
      *  5) UI HYDRATE + RENDER ALL
