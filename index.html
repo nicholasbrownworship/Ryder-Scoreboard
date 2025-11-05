@@ -97,7 +97,7 @@
         <button id="btnPrint" class="btn primary">Print / PDF</button>
         <button id="btnExport" class="btn">Export JSON</button>
         <button id="btnImportCSV" class="btn">Import CSV (players)</button>
-        <button id="btnShuffle" class="btn">Shuffle Groups</button>
+        <button id="btnShuffle" class="btn">Shuffle All</button>
         <button id="btnResetAll" class="btn warn">Reset All</button>
       </div>
     </header>
@@ -168,7 +168,7 @@
             </select>
             <button id="btnClearSide" class="btn warn">Clear side</button>
 
-            <!-- Auto-pair controls (autopair.js wires to these) -->
+            <!-- Auto-pair controls (wired in autopair.js) -->
             <label style="margin-left:10px">Auto-pair:</label>
             <button id="btnAutoPairRound" class="btn">This round</button>
             <button id="btnAutoPairDay" class="btn">Both rounds (this day)</button>
@@ -230,12 +230,6 @@
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
     window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']); // expose for autopair.js
-
-    // ---- safe binder so missing elements never crash the app ----
-    function on(id, type, fn){
-      const el = document.getElementById(id);
-      if (el) el.addEventListener(type, fn);
-    }
 
     // State now includes two days
     let state = {
@@ -360,7 +354,7 @@
       return `${p.firstName} ${nick}${p.lastName}`.replace(/\s+/g,' ').trim();
     }
 
-    /* remove player helper (cleans from all groups + roster) */
+    /* NEW: remove player helper (cleans from all groups + roster) */
     function removePlayerEverywhere(playerId){
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
@@ -377,6 +371,7 @@
       renderAll();
     }
 
+    /* Merge helper (now uses normalizePlayer) */
     function mergePlayers(existing, incoming){
       const byKey = x=> (x.firstName+'|'+x.lastName+'|'+(x.email||'')).toLowerCase();
       const map = new Map((existing||[]).map(p=>[byKey(p), p]));
@@ -388,6 +383,7 @@
       return Array.from(map.values());
     }
 
+    /* UPDATED: renderPlayers includes delete */
     function renderPlayers(){
       const q = (state.filters.q||'').toLowerCase();
       const team = state.filters.team;
@@ -438,7 +434,7 @@
     document.getElementById('btnReloadPool').addEventListener('click', ()=>{
       const fromOld = loadPlayersFromPreviousSite();
       if(fromOld.length){ state.players = mergePlayers(state.players, fromOld); save(); renderAll(); alert('Loaded players from previous site signups.'); }
-      else alert('No signups found under key '+SIGNUPS_KEY+'. Add players manually or use Import CSV.');
+      else alert('No signups found under key '+SIGNUPS_KEY+'. Add players manually or use an Import button.');
     });
 
     document.getElementById('btnAddManual').addEventListener('click', ()=>{
@@ -551,7 +547,9 @@
       return s;
     }
 
-    function onDragPlayer(e){ e.dataTransfer.setData('text/player', e.currentTarget.dataset.id); }
+    function onDragPlayer(e){
+      e.dataTransfer.setData('text/player', e.currentTarget.dataset.id);
+    }
 
     function onDropToSlot(e, slot){
       e.preventDefault(); slot.classList.remove('dragover');
@@ -890,7 +888,7 @@
     });
 
     /*********************************
-     *  8) IMPORT: CSV (players)
+     *  8) IMPORTS (CSV)
      *********************************/
     function pickFile(accept, multiple=false){
       return new Promise((resolve)=>{
@@ -941,7 +939,7 @@
       return out;
     }
 
-    on('btnImportCSV','click', async ()=>{
+    document.getElementById('btnImportCSV').addEventListener('click', async ()=>{
       const files = await pickFile('.csv');
       if (!files.length) return;
       const file = files[0];
@@ -974,6 +972,7 @@
     /*********************************
      *  Shuffle / Auto-balance / Reset
      *********************************/
+    function clone(o){ return JSON.parse(JSON.stringify(o)); }
     function randShuffle(arr){
       const a = arr.slice();
       for(let i=a.length-1;i>0;i--){
@@ -983,88 +982,32 @@
       return a;
     }
 
-    function assignForSide(fmt, players, existingGroups, fillOnly){
-      const isTeam = window.TEAM_FORMATS.has(fmt);
-      const groups = existingGroups.map(g => g.slice());
-      const empties = [];
-      if (fillOnly){
-        groups.forEach((g, gi)=>{
-          g.forEach((pid, pos)=>{ if (!pid) empties.push({gi, pos}); });
-        });
-      }
-
-      const placed = new Set(groups.flat().filter(Boolean));
-      const roster = (state.players || []).map(p => p.id).filter(id => !fillOnly || !placed.has(id));
-      const oz = roster.filter(id => (findPlayer(id)?.team === 'ozark'));
-      const va = roster.filter(id => (findPlayer(id)?.team === 'valley'));
-      let ozQ = randShuffle(oz);
-      let vaQ = randShuffle(va);
-      const nextOz = ()=> ozQ.length ? ozQ.pop() : null;
-      const nextVa = ()=> vaQ.length ? vaQ.pop() : null;
-
-      if (isTeam){
-        const targets = fillOnly ? empties : groups.flatMap((_,gi)=>[0,1,2,3].map(pos=>({gi,pos})));
-        for (const t of targets){
-          if (groups[t.gi][t.pos]) continue;
-          const g = groups[t.gi];
-          const ozCnt = g.map(pid=>findPlayer(pid)?.team).filter(x=>x==='ozark').length;
-          const vaCnt = g.map(pid=>findPlayer(pid)?.team).filter(x=>x==='valley').length;
-          let pid = null;
-          if (ozCnt < 2 && vaCnt < 2){
-            pid = (ozCnt <= vaCnt) ? nextOz() : nextVa();
-            if (!pid) pid = nextOz() || nextVa();
-          } else if (ozCnt < 2){
-            pid = nextOz() || nextVa();
-          } else if (vaCnt < 2){
-            pid = nextVa() || nextOz();
-          } else {
-            pid = nextOz() || nextVa();
-          }
-          if (pid) groups[t.gi][t.pos] = pid;
-        }
-      } else {
-        const targets = fillOnly
-          ? empties
-          : groups.flatMap((_,gi)=>[0,1,2,3].map(pos=>({gi,pos})));
-        for (const t of targets){
-          if (groups[t.gi][t.pos]) continue;
-          const matePos = (t.pos % 2 === 0) ? t.pos+1 : t.pos-1;
-          const mateId = groups[t.gi][matePos];
-          let pid = null;
-          if (mateId){
-            const mateTeam = findPlayer(mateId)?.team;
-            pid = (mateTeam === 'ozark') ? nextVa() : nextOz();
-            if (!pid) pid = nextOz() || nextVa();
-          } else {
-            pid = (ozQ.length >= vaQ.length) ? nextOz() : nextVa();
-            if (!pid) pid = nextOz() || nextVa();
-          }
-          if (pid) groups[t.gi][t.pos] = pid;
-        }
-      }
-      return groups;
-    }
-
+    // --- Shuffle All: ONLY moves players already placed; empties stay empty ---
     function shuffleAll(){
-      const fillOnly = !!document.getElementById('chkFillUnassigned')?.checked;
-
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
-          const fmt = state.format[day][side];
-          const gs = desiredGroupSize(fmt);
-          if (!Array.isArray(state.groups[day][side]) || state.groups[day][side].length !== state.numGroups){
-            state.groups[day][side] = Array.from({length: state.numGroups}, ()=> Array(gs).fill(null));
-          } else {
-            state.groups[day][side] = state.groups[day][side].map(g=>{
-              const a = (Array.isArray(g)?g:[]).slice(0, gs);
-              while (a.length < gs) a.push(null);
-              return a;
+          const groups = state.groups?.[day]?.[side];
+          if (!Array.isArray(groups) || !groups.length) return;
+
+          // gather filled coordinates and their player IDs
+          const coords = [];
+          const ids = [];
+          groups.forEach((g, gi)=>{
+            (Array.isArray(g)?g:[]).forEach((pid, pos)=>{
+              if (pid) { coords.push({gi: gi, pos}); ids.push(pid); }
             });
-          }
-          state.groups[day][side] = assignForSide(fmt, state.players, state.groups[day][side], fillOnly);
+          });
+
+          if (ids.length < 2) return; // nothing meaningful to shuffle
+
+          const shuffled = randShuffle(ids);
+          coords.forEach((c, i)=>{
+            groups[c.gi][c.pos] = shuffled[i];
+          });
         });
       });
-      save(); renderAll();
+      save();
+      renderAll();
     }
 
     function autoBalanceAll(){
@@ -1091,6 +1034,7 @@
           if (isTeam){
             const oz = pid => findPlayer(pid)?.team === 'ozark';
             const va = pid => findPlayer(pid)?.team === 'valley';
+
             for (let pass=0; pass<6; pass++){
               let changed = false;
               for (let g1=0; g1<groups.length; g1++){
@@ -1100,6 +1044,7 @@
                   const vaA = A.filter(Boolean).filter(va).length;
                   const ozB = B.filter(Boolean).filter(oz).length;
                   const vaB = B.filter(Boolean).filter(va).length;
+
                   if (ozA > 2 && vaB > 2) changed = swapBetween(A, B, oz, va) || changed;
                   if (vaA > 2 && ozB > 2) changed = swapBetween(A, B, va, oz) || changed;
                 }
@@ -1136,15 +1081,18 @@
       save(); renderAll();
     }
 
-    on('btnShuffle','click', ()=>{
-      if(!confirm('Shuffle all groups across Day 1 & Day 2? (Respects “Fill unassigned only” if checked.)')) return;
+    // Buttons
+    document.getElementById('btnShuffle').addEventListener('click', ()=>{
+      if(!confirm('Shuffle all currently filled slots across Day 1 & Day 2? (Empty slots will stay empty.)')) return;
       shuffleAll();
     });
-    on('pillAutoBalance','click', ()=>{
+
+    document.getElementById('pillAutoBalance').addEventListener('click', ()=>{
       if(!confirm('Auto-balance teams across all groups (no handicaps)?')) return;
       autoBalanceAll();
     });
-    on('btnResetAll','click', ()=>{
+
+    document.getElementById('btnResetAll').addEventListener('click', ()=>{
       if(!confirm('Reset ALL players and pairings? This removes the entire roster and clears Day 1 & Day 2.')) return;
 
       // wipe roster
