@@ -672,63 +672,73 @@ function desiredGroupSize(fmt){ return 4; }
     document.getElementById('pillOnce').addEventListener('click', ()=> alert('One placement per player per side per day is enforced when you drop a player again.'));
     document.getElementById('pillBalance').addEventListener('click', ()=> alert('Team events require 2v2 (2 Ozark + 2 Valley). Singles requires 1v1.'));
 
-   /*********************************
- *  4) PRINT / EXPORT (safe + reset)
+  /*********************************
+ *  4) PRINT / EXPORT (robust reset)
  *********************************/
 const elPrintArea = document.getElementById('printArea');
 const elPrintContent = document.getElementById('printContent');
 
+// Make sure the print area can never block clicks when not printing
+elPrintArea.style.pointerEvents = 'none';
+
 document.getElementById('btnPrint').addEventListener('click', () => {
   ensurePrintOverrides();
   buildPrintPages();
-  beginPrint();
+
+  // Enter print mode
+  document.documentElement.setAttribute('data-printing', '1');
+  elPrintArea.style.display = 'block';
+  elPrintArea.style.pointerEvents = 'auto';
+
+  // Robust endPrint with multiple fallbacks
+  const endOnce = (() => {
+    let done = false;
+    return () => {
+      if (done) return;
+      done = true;
+      document.documentElement.removeAttribute('data-printing');
+      elPrintArea.style.display = 'none';
+      elPrintArea.style.pointerEvents = 'none';
+      elPrintContent.innerHTML = '';
+      window.removeEventListener('afterprint', endOnce);
+      if (mm && mm.removeEventListener) mm.removeEventListener('change', onMM);
+      if (mm && mm.removeListener) mm.removeListener(onMM); // older Safari
+      window.removeEventListener('focus', onFocus);
+    };
+  })();
+
+  const onMM = (e) => { if (!e.matches) endOnce(); };
+  const onFocus = () => { // user came back from print dialog
+    // Give the browser a moment to settle, then ensure cleanup
+    setTimeout(endOnce, 150);
+  };
+
+  window.addEventListener('afterprint', endOnce, { once: true });
+  const mm = window.matchMedia && window.matchMedia('print');
+  if (mm && mm.addEventListener) mm.addEventListener('change', onMM);
+  else if (mm && mm.addListener) mm.addListener(onMM); // older Safari
+  window.addEventListener('focus', onFocus, { once: true });
+
+  // Absolute last-resort cleanup if none of the above fire
+  setTimeout(endOnce, 8000);
+
+  // Trigger the print dialog
   window.print();
 });
 
-/* ---- Print lifecycle helpers ---- */
-function beginPrint(){
-  // Show printable area and mark doc as "printing" (scopes CSS)
-  elPrintArea.style.display = 'block';
-  document.documentElement.setAttribute('data-printing', '1');
-}
-
-function endPrint(){
-  // Clean up so normal UI works exactly as before
-  document.documentElement.removeAttribute('data-printing');
-  elPrintArea.style.display = 'none';
-  elPrintContent.innerHTML = '';
-  // (Keep the override <style> in head — it only applies when data-printing="1")
-}
-
-// Cross-browser: be sure we always reset
-window.addEventListener('afterprint', endPrint);
-const mm = window.matchMedia('print');
-if (mm && typeof mm.addEventListener === 'function') {
-  mm.addEventListener('change', e => { if (!e.matches) endPrint(); });
-} else if (mm && typeof mm.addListener === 'function') {
-  // older Safari
-  mm.addListener(e => { if (!e.matches) endPrint(); });
-}
-
-/* ---- One-time print CSS overrides (scoped) ---- */
+/* ---- One-time print CSS (scoped to data-printing) ---- */
 function ensurePrintOverrides(){
   if (document.getElementById('printOverridesScoped')) return;
   const style = document.createElement('style');
   style.id = 'printOverridesScoped';
   style.textContent = `
     @media print {
-      /* Only trigger these when we explicitly enter print mode */
       html[data-printing="1"] .app { display:block !important; padding:0 !important; }
       html[data-printing="1"] header,
       html[data-printing="1"] .panel:not(.printable) { display:none !important; }
       html[data-printing="1"] .printable {
-        display:block !important;
-        width:100% !important;
-        border:none !important;
-        box-shadow:none !important;
-        padding:0 !important;
-        margin:0 !important;
-        background:#fff !important;
+        display:block !important; width:100% !important; border:none !important;
+        box-shadow:none !important; padding:0 !important; margin:0 !important; background:#fff !important;
       }
       html[data-printing="1"] body { background:#fff !important; color:#000 !important; }
     }
@@ -736,7 +746,7 @@ function ensurePrintOverrides(){
   document.head.appendChild(style);
 }
 
-/* ---- Build the wide, full-page print content ---- */
+/* ---- Full-width, two-page print (Day 1 / Day 2) ---- */
 function buildPrintPages(){
   const css = `
     <style>
@@ -841,7 +851,6 @@ function buildPrintPages(){
       </div>`;
   };
 
-  // Build full-width pages (Day 1 / Day 2)
   elPrintContent.innerHTML = css + dayPage('day1') + dayPage('day2');
 }
 
@@ -853,8 +862,6 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
   a.download = 'ozark_pairings_twodays.json';
   a.click();
 });
-
-
 
     /*********************************
      *  5) UI HYDRATE + RENDER ALL
