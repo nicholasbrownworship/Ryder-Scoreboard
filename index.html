@@ -267,8 +267,7 @@
     }
 
     // Always 4 slots per group so Singles can show two 1v1 matches
-function desiredGroupSize(fmt){ return 4; }
-
+    function desiredGroupSize(fmt){ return 4; }
     window.desiredGroupSize = desiredGroupSize;
 
     function loadPlayersFromPreviousSite(){
@@ -298,6 +297,35 @@ function desiredGroupSize(fmt){ return 4; }
         {id:uid(), firstName:"Alex", lastName:"M.", nickname:"", team:"valley"},
         {id:uid(), firstName:"Jordan", lastName:"S.", nickname:"J-Smooth", team:"valley"}
       ];
+    }
+
+    /* === NEW: normalizer used by merge/imports === */
+    function normalizePlayer(p){
+      const obj = {...p};
+      let first = obj.firstName || obj.First || obj.firstname || "";
+      let last  = obj.lastName  || obj.Last  || obj.lastname  || "";
+      if ((!first || !last) && obj.name) {
+        const parts = String(obj.name).trim().split(/\s+/);
+        first = first || parts[0] || "";
+        last  = last  || parts.slice(1).join(" ") || "";
+      }
+      const nickname = obj.nickname || obj.Nickname || obj.nick || "";
+      let teamRaw = obj.team || obj.Team || "";
+      let team = "ozark";
+      if (typeof teamRaw === "string" && teamRaw.toLowerCase().includes("val")) team = "valley";
+      if (typeof teamRaw === "string" && teamRaw.toLowerCase().includes("oz")) team = "ozark";
+      const email = obj.email || obj.Email || "";
+      const phone = obj.phone || obj.Phone || "";
+      const id = obj.id || uid();
+      return {
+        id,
+        firstName: String(first||"").trim(),
+        lastName : String(last ||"").trim(),
+        nickname : String(nickname||"").trim(),
+        team,
+        email,
+        phone
+      };
     }
 
     /*********************************
@@ -341,7 +369,19 @@ function desiredGroupSize(fmt){ return 4; }
       renderAll();
     }
 
-    /* UPDATED: renderPlayers now includes a delete × button */
+    /* Merge helper (now uses normalizePlayer) */
+    function mergePlayers(existing, incoming){
+      const byKey = x=> (x.firstName+'|'+x.lastName+'|'+(x.email||'')).toLowerCase();
+      const map = new Map((existing||[]).map(p=>[byKey(p), p]));
+      (incoming||[]).forEach(p=>{
+        const np = normalizePlayer(p);
+        const k = byKey(np);
+        if(!map.has(k)) map.set(k,np);
+      });
+      return Array.from(map.values());
+    }
+
+    /* UPDATED: renderPlayers includes delete */
     function renderPlayers(){
       const q = (state.filters.q||'').toLowerCase();
       const team = state.filters.team;
@@ -403,17 +443,6 @@ function desiredGroupSize(fmt){ return 4; }
       state.players.push({id:uid(), firstName, lastName, nickname, team}); save(); renderAll();
     });
 
-    function mergePlayers(existing, incoming){
-      const byKey = x=> (x.firstName+'|'+x.lastName+'|'+(x.email||'')).toLowerCase();
-      const map = new Map(existing.map(p=>[byKey(p), p]));
-      incoming.forEach(p=>{
-        const np = normalizePlayer(p);
-        const k = byKey(np);
-        if(!map.has(k)) map.set(k,np);
-      });
-      return Array.from(map.values());
-    }
-
     /*********************************
      *  2) BUILDER GRID (Per Day + Side)
      *********************************/
@@ -473,24 +502,22 @@ function desiredGroupSize(fmt){ return 4; }
           colB.appendChild(buildSlot(day, side, idx, 3, group[3]));
           slotsWrap.appendChild(colA);
           slotsWrap.appendChild(colB);
-       }else{
-  // Singles = two separate 1v1 matches per group
-  slotsWrap.appendChild(buildSlot(day, side, idx, 0, group[0]));
-  slotsWrap.appendChild(buildSlot(day, side, idx, 1, group[1]));
+        } else {
+          // Singles = two separate 1v1 matches per group
+          slotsWrap.appendChild(buildSlot(day, side, idx, 0, group[0]));
+          slotsWrap.appendChild(buildSlot(day, side, idx, 1, group[1]));
 
-  // separator line between the two matches
-  const sep = document.createElement('div');
-  sep.style.gridColumn = '1 / -1';
-  sep.style.height = '6px';
-  sep.style.borderTop = '1px dashed #2a3a3d';
-  sep.style.opacity = '0.4';
-  sep.style.margin = '4px 0';
-  slotsWrap.appendChild(sep);
+          const sep = document.createElement('div');
+          sep.style.gridColumn = '1 / -1';
+          sep.style.height = '6px';
+          sep.style.borderTop = '1px dashed #2a3a3d';
+          sep.style.opacity = '0.4';
+          sep.style.margin = '4px 0';
+          slotsWrap.appendChild(sep);
 
-  slotsWrap.appendChild(buildSlot(day, side, idx, 2, group[2]));
-  slotsWrap.appendChild(buildSlot(day, side, idx, 3, group[3]));
-}
-
+          slotsWrap.appendChild(buildSlot(day, side, idx, 2, group[2]));
+          slotsWrap.appendChild(buildSlot(day, side, idx, 3, group[3]));
+        }
 
         card.appendChild(slotsWrap);
         elGrid.appendChild(card);
@@ -590,7 +617,6 @@ function desiredGroupSize(fmt){ return 4; }
     const elAssignTable = document.getElementById('assignmentTable');
 
     function renderAssignmentsTable(){
-      // Guard against bad shapes so forEach never throws
       sanitizeGroups();
 
       const used = {
@@ -640,22 +666,21 @@ function desiredGroupSize(fmt){ return 4; }
                 else if(!(oz===2 && va===2)) problems.push(`${printSide(day,side)} Group ${i+1}: must be 2 OZ + 2 VA (now ${oz}/${va})`);
               }
             }else{
-  // Singles = two 1v1 matches: (0 vs 1) and (2 vs 3)
-  const pairIdx = [[0,1],[2,3]];
-  pairIdx.forEach((pair, pi)=>{
-    const ids = pair.map(pos => (Array.isArray(g)?g[pos]:null)).filter(Boolean);
-    if (ids.length === 0) return;
-    if (ids.length !== 2) {
-      problems.push(`${printSide(day,side)} Group ${i+1} Match ${pi+1}: needs exactly 2 players (1v1).`);
-      return;
-    }
-    const pA = findPlayer(ids[0]), pB = findPlayer(ids[1]);
-    if (!pA || !pB || pA.team === pB.team) {
-      problems.push(`${printSide(day,side)} Group ${i+1} Match ${pi+1}: must be OZ vs VA.`);
-    }
-  });
-}
-
+              // Singles = two 1v1 matches: (0 vs 1) and (2 vs 3)
+              const pairIdx = [[0,1],[2,3]];
+              pairIdx.forEach((pair, pi)=>{
+                const ids = pair.map(pos => (Array.isArray(g)?g[pos]:null)).filter(Boolean);
+                if (ids.length === 0) return;
+                if (ids.length !== 2) {
+                  problems.push(`${printSide(day,side)} Group ${i+1} Match ${pi+1}: needs exactly 2 players (1v1).`);
+                  return;
+                }
+                const pA = findPlayer(ids[0]), pB = findPlayer(ids[1]);
+                if (!pA || !pB || pA.team === pB.team) {
+                  problems.push(`${printSide(day,side)} Group ${i+1} Match ${pi+1}: must be OZ vs VA.`);
+                }
+              });
+            }
           });
         });
       });
@@ -672,196 +697,334 @@ function desiredGroupSize(fmt){ return 4; }
     document.getElementById('pillOnce').addEventListener('click', ()=> alert('One placement per player per side per day is enforced when you drop a player again.'));
     document.getElementById('pillBalance').addEventListener('click', ()=> alert('Team events require 2v2 (2 Ozark + 2 Valley). Singles requires 1v1.'));
 
-  /*********************************
- *  4) PRINT / EXPORT (robust reset)
- *********************************/
-const elPrintArea = document.getElementById('printArea');
-const elPrintContent = document.getElementById('printContent');
+    /*********************************
+     *  4) PRINT / EXPORT (robust reset)
+     *********************************/
+    const elPrintArea = document.getElementById('printArea');
+    const elPrintContent = document.getElementById('printContent');
 
-// Make sure the print area can never block clicks when not printing
-elPrintArea.style.pointerEvents = 'none';
+    // Make sure the print area can never block clicks when not printing
+    elPrintArea.style.pointerEvents = 'none';
 
-document.getElementById('btnPrint').addEventListener('click', () => {
-  ensurePrintOverrides();
-  buildPrintPages();
+    document.getElementById('btnPrint').addEventListener('click', () => {
+      ensurePrintOverrides();
+      buildPrintPages();
 
-  // Enter print mode
-  document.documentElement.setAttribute('data-printing', '1');
-  elPrintArea.style.display = 'block';
-  elPrintArea.style.pointerEvents = 'auto';
+      // Enter print mode
+      document.documentElement.setAttribute('data-printing', '1');
+      elPrintArea.style.display = 'block';
+      elPrintArea.style.pointerEvents = 'auto';
 
-  // Robust endPrint with multiple fallbacks
-  const endOnce = (() => {
-    let done = false;
-    return () => {
-      if (done) return;
-      done = true;
-      document.documentElement.removeAttribute('data-printing');
-      elPrintArea.style.display = 'none';
-      elPrintArea.style.pointerEvents = 'none';
-      elPrintContent.innerHTML = '';
-      window.removeEventListener('afterprint', endOnce);
-      if (mm && mm.removeEventListener) mm.removeEventListener('change', onMM);
-      if (mm && mm.removeListener) mm.removeListener(onMM); // older Safari
-      window.removeEventListener('focus', onFocus);
-    };
-  })();
+      // Robust endPrint with multiple fallbacks
+      const endOnce = (() => {
+        let done = false;
+        return () => {
+          if (done) return;
+          done = true;
+          document.documentElement.removeAttribute('data-printing');
+          elPrintArea.style.display = 'none';
+          elPrintArea.style.pointerEvents = 'none';
+          elPrintContent.innerHTML = '';
+          window.removeEventListener('afterprint', endOnce);
+          if (mm && mm.removeEventListener) mm.removeEventListener('change', onMM);
+          if (mm && mm.removeListener) mm.removeListener(onMM); // older Safari
+          window.removeEventListener('focus', onFocus);
+        };
+      })();
 
-  const onMM = (e) => { if (!e.matches) endOnce(); };
-  const onFocus = () => { // user came back from print dialog
-    // Give the browser a moment to settle, then ensure cleanup
-    setTimeout(endOnce, 150);
-  };
+      const onMM = (e) => { if (!e.matches) endOnce(); };
+      const onFocus = () => { setTimeout(endOnce, 150); };
 
-  window.addEventListener('afterprint', endOnce, { once: true });
-  const mm = window.matchMedia && window.matchMedia('print');
-  if (mm && mm.addEventListener) mm.addEventListener('change', onMM);
-  else if (mm && mm.addListener) mm.addListener(onMM); // older Safari
-  window.addEventListener('focus', onFocus, { once: true });
+      window.addEventListener('afterprint', endOnce, { once: true });
+      const mm = window.matchMedia && window.matchMedia('print');
+      if (mm && mm.addEventListener) mm.addEventListener('change', onMM);
+      else if (mm && mm.addListener) mm.addListener(onMM); // older Safari
+      window.addEventListener('focus', onFocus, { once: true });
 
-  // Absolute last-resort cleanup if none of the above fire
-  setTimeout(endOnce, 8000);
+      // Absolute last-resort cleanup if none of the above fire
+      setTimeout(endOnce, 8000);
 
-  // Trigger the print dialog
-  window.print();
-});
+      // Trigger the print dialog
+      window.print();
+    });
 
-/* ---- One-time print CSS (scoped to data-printing) ---- */
-function ensurePrintOverrides(){
-  if (document.getElementById('printOverridesScoped')) return;
-  const style = document.createElement('style');
-  style.id = 'printOverridesScoped';
-  style.textContent = `
-    @media print {
-      html[data-printing="1"] .app { display:block !important; padding:0 !important; }
-      html[data-printing="1"] header,
-      html[data-printing="1"] .panel:not(.printable) { display:none !important; }
-      html[data-printing="1"] .printable {
-        display:block !important; width:100% !important; border:none !important;
-        box-shadow:none !important; padding:0 !important; margin:0 !important; background:#fff !important;
-      }
-      html[data-printing="1"] body { background:#fff !important; color:#000 !important; }
+    /* ---- One-time print CSS (scoped to data-printing) ---- */
+    function ensurePrintOverrides(){
+      if (document.getElementById('printOverridesScoped')) return;
+      const style = document.createElement('style');
+      style.id = 'printOverridesScoped';
+      style.textContent = `
+        @media print {
+          html[data-printing="1"] .app { display:block !important; padding:0 !important; }
+          html[data-printing="1"] header,
+          html[data-printing="1"] .panel:not(.printable) { display:none !important; }
+          html[data-printing="1"] .printable {
+            display:block !important; width:100% !important; border:none !important;
+            box-shadow:none !important; padding:0 !important; margin:0 !important; background:#fff !important;
+          }
+          html[data-printing="1"] body { background:#fff !important; color:#000 !important; }
+        }
+      `;
+      document.head.appendChild(style);
     }
-  `;
-  document.head.appendChild(style);
-}
 
-/* ---- Full-width, two-page print (Day 1 / Day 2) ---- */
-function buildPrintPages(){
-  const css = `
-    <style>
-      @page { size: Letter portrait; margin: 0.35in; }
-      * { box-sizing: border-box; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* ---- Full-width, two-page print (Day 1 / Day 2) ---- */
+    function buildPrintPages(){
+      const css = `
+        <style>
+          @page { size: Letter portrait; margin: 0.35in; }
+          * { box-sizing: border-box; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-      .page { page-break-after: always; width:100%; }
-      .page:last-child { page-break-after: auto; }
+          .page { page-break-after: always; width:100%; }
+          .page:last-child { page-break-after: auto; }
 
-      .title { margin:0 0 10px; font-size:22px; font-weight:800; }
-      .day-header { font-size:16px; font-weight:700; margin:0 0 10px; }
+          .title { margin:0 0 10px; font-size:22px; font-weight:800; }
+          .day-header { font-size:16px; font-weight:700; margin:0 0 10px; }
 
-      .sheet {
-        border:1px solid #888; margin:10px 0 14px; padding:10px; border-radius:8px;
-        page-break-inside: avoid; background:#fff; width:100%;
-      }
-      .sheet h2 { margin:0 0 8px 0; font-size:15px; }
+          .sheet {
+            border:1px solid #888; margin:10px 0 14px; padding:10px; border-radius:8px;
+            page-break-inside: avoid; background:#fff; width:100%;
+          }
+          .sheet h2 { margin:0 0 8px 0; font-size:15px; }
 
-      table.print { width:100%; border-collapse:collapse; table-layout:auto; font-size:12px; }
-      .print th, .print td { border:1px solid #999; padding:7px 8px; vertical-align:top; overflow-wrap:anywhere; }
-      .print th { text-align:left; background:#f5f5f5; font-weight:700; }
+          table.print { width:100%; border-collapse:collapse; table-layout:auto; font-size:12px; }
+          .print th, .print td { border:1px solid #999; padding:7px 8px; vertical-align:top; overflow-wrap:anywhere; }
+          .print th { text-align:left; background:#f5f5f5; font-weight:700; }
 
-      .col-num { min-width:36px; text-align:center; }
-      .col-format { min-width:110px; }
-      .col-players { width:auto; }
+          .col-num { min-width:36px; text-align:center; }
+          .col-format { min-width:110px; }
+          .col-players { width:auto; }
 
-      .muted { color:#555; }
-      .match-line { margin:2px 0; }
-      .vs { font-weight:700; padding:0 4px; }
+          .muted { color:#555; }
+          .match-line { margin:2px 0; }
+          .vs { font-weight:700; padding:0 4px; }
 
-      .side-wrap { page-break-inside: avoid; }
-    </style>`;
+          .side-wrap { page-break-inside: avoid; }
+        </style>`;
 
-  const mkNameTag = (pid) => {
-    if (!pid) return '';
-    const p = findPlayer(pid);
-    return p ? `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>` : '';
-  };
+      const mkNameTag = (pid) => {
+        if (!pid) return '';
+        const p = findPlayer(pid);
+        return p ? `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>` : '';
+      };
 
-  const sideBlock = (day, side) => {
-    const fmt = state.format[day][side];
-    const isTeam = window.TEAM_FORMATS.has(fmt);
+      const sideBlock = (day, side) => {
+        const fmt = state.format[day][side];
+        const isTeam = window.TEAM_FORMATS.has(fmt);
 
-    const rows = (state.groups[day][side] || []).map((g,i) => {
-      if (isTeam) {
-        const a = (g.slice(0,2)||[]).filter(Boolean).map(mkNameTag).join('<br/>') || '&nbsp;';
-        const b = (g.slice(2,4)||[]).filter(Boolean).map(mkNameTag).join('<br/>') || '&nbsp;';
+        const rows = (state.groups[day][side] || []).map((g,i) => {
+          if (isTeam) {
+            const a = (g.slice(0,2)||[]).filter(Boolean).map(mkNameTag).join('<br/>') || '&nbsp;';
+            const b = (g.slice(2,4)||[]).filter(Boolean).map(mkNameTag).join('<br/>') || '&nbsp;';
+            return `
+              <tr>
+                <td class="col-num">${i+1}</td>
+                <td class="col-format">${fmt}</td>
+                <td class="col-players">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div style="border:1px solid #bbb;padding:6px;border-radius:6px"><strong>Team A</strong><br/>${a}</div>
+                    <div style="border:1px solid #bbb;padding:6px;border-radius:6px"><strong>Team B</strong><br/>${b}</div>
+                  </div>
+                </td>
+              </tr>`;
+          } else {
+            // Singles -> two 1v1 matches: (0 vs 1) and (2 vs 3)
+            const a1 = mkNameTag(g[0]), b1 = mkNameTag(g[1]);
+            const a2 = mkNameTag(g[2]), b2 = mkNameTag(g[3]);
+            const line1 = (a1 || b1) ? `<div class="match-line">Match 1: ${a1 || '&nbsp;'} <span class="vs">vs</span> ${b1 || '&nbsp;'}</div>` : '';
+            const line2 = (a2 || b2) ? `<div class="match-line">Match 2: ${a2 || '&nbsp;'} <span class="vs">vs</span> ${b2 || '&nbsp;'}</div>` : '';
+            const names = (line1 + line2) || '&nbsp;';
+            return `
+              <tr>
+                <td class="col-num">${i+1}</td>
+                <td class="col-format">${fmt}</td>
+                <td class="col-players">${names}</td>
+              </tr>`;
+          }
+        }).join('');
+
+        const sideLabel = side === 'front' ? 'Front 9' : 'Back 9';
         return `
-          <tr>
-            <td class="col-num">${i+1}</td>
-            <td class="col-format">${fmt}</td>
-            <td class="col-players">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div style="border:1px solid #bbb;padding:6px;border-radius:6px"><strong>Team A</strong><br/>${a}</div>
-                <div style="border:1px solid #bbb;padding:6px;border-radius:6px"><strong>Team B</strong><br/>${b}</div>
-              </div>
-            </td>
-          </tr>`;
+          <div class="sheet side-wrap">
+            <h2>${sideLabel} • ${fmt}</h2>
+            <table class="print">
+              <thead>
+                <tr>
+                  <th class="col-num">#</th>
+                  <th class="col-format">Format</th>
+                  <th class="col-players">Players</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      };
+
+      const dayPage = (day) => {
+        const date = state.dates[day] || '';
+        const dayTitle = (day==='day1' ? 'Day 1' : 'Day 2') + (date ? ` • ${date}` : '');
+        return `
+          <div class="page">
+            <div class="title">${state.eventName}</div>
+            <div class="day-header">${dayTitle}</div>
+            ${sideBlock(day, 'front')}
+            ${sideBlock(day, 'back')}
+          </div>`;
+      };
+
+      elPrintContent.innerHTML = css + dayPage('day1') + dayPage('day2');
+    }
+
+    /* ---- JSON export ---- */
+    document.getElementById('btnExport').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ozark_pairings_twodays.json';
+      a.click();
+    });
+
+    /*********************************
+     *  8) IMPORTS (CSV / JSON)
+     *********************************/
+    function pickFile(accept, multiple=false){
+      return new Promise((resolve)=>{
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = accept;
+        inp.multiple = !!multiple;
+        inp.style.display = 'none';
+        document.body.appendChild(inp);
+        inp.addEventListener('change', ()=> resolve(Array.from(inp.files||[])));
+        inp.click();
+        setTimeout(()=> document.body.removeChild(inp), 0);
+      });
+    }
+
+    function parseCSV(text){
+      const rows = [];
+      let row = [], field = '', inQuotes = false;
+      for (let i=0;i<text.length;i++){
+        const c = text[i];
+        if (c === '"'){
+          if (inQuotes && text[i+1] === '"'){ field += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (c === ',' && !inQuotes){
+          row.push(field); field = '';
+        } else if ((c === '\n' || c === '\r') && !inQuotes){
+          if (field.length || row.length) { row.push(field); rows.push(row); row = []; field = ''; }
+          if (c === '\r' && text[i+1] === '\n') i++;
+        } else {
+          field += c;
+        }
+      }
+      if (field.length || row.length) { row.push(field); rows.push(row); }
+      return rows;
+    }
+
+    function csvToObjects(csvText){
+      const rows = parseCSV(csvText);
+      if (!rows.length) return [];
+      const header = rows[0].map(h => String(h||'').trim());
+      const out = [];
+      for (let i=1;i<rows.length;i++){
+        const obj = {};
+        const r = rows[i];
+        header.forEach((h,idx)=> { obj[h] = r[idx] ?? ''; });
+        out.push(obj);
+      }
+      return out;
+    }
+
+    document.getElementById('btnImportCSV').addEventListener('click', async ()=>{
+      const files = await pickFile('.csv');
+      if (!files.length) return;
+      const file = files[0];
+      const text = await file.text();
+
+      let objs = csvToObjects(text);
+      if (!objs.length) { alert('CSV appears empty.'); return; }
+
+      const mapped = objs.map(o=>{
+        const map = {};
+        Object.keys(o).forEach(k => map[k.trim().toLowerCase()] = o[k]);
+        const candidate = {
+          id       : map.id || '',
+          firstName: map.firstname || map.first || '',
+          lastName : map.lastname  || map.last  || '',
+          nickname : map.nickname  || map.nick  || '',
+          team     : map.team      || '',
+          email    : map.email     || '',
+          phone    : map.phone     || '',
+          name     : map.name      || ''
+        };
+        return normalizePlayer(candidate);
+      });
+
+      state.players = mergePlayers(state.players || [], mapped);
+      save(); renderAll();
+      alert(`Imported ${mapped.length} rows from CSV and merged into the roster.`);
+    });
+
+    document.getElementById('btnImportPlayers').addEventListener('click', async ()=>{
+      const files = await pickFile('.json,.csv');
+      if (!files.length) return;
+      const f = files[0];
+
+      let incoming = [];
+      if (f.name.toLowerCase().endsWith('.csv')){
+        const text = await f.text();
+        incoming = csvToObjects(text).map(normalizePlayer);
       } else {
-        // Singles -> two 1v1 matches: (0 vs 1) and (2 vs 3)
-        const a1 = mkNameTag(g[0]), b1 = mkNameTag(g[1]);
-        const a2 = mkNameTag(g[2]), b2 = mkNameTag(g[3]);
-        const line1 = (a1 || b1) ? `<div class="match-line">Match 1: ${a1 || '&nbsp;'} <span class="vs">vs</span> ${b1 || '&nbsp;'}</div>` : '';
-        const line2 = (a2 || b2) ? `<div class="match-line">Match 2: ${a2 || '&nbsp;'} <span class="vs">vs</span> ${b2 || '&nbsp;'}</div>` : '';
-        const names = (line1 + line2) || '&nbsp;';
-        return `
-          <tr>
-            <td class="col-num">${i+1}</td>
-            <td class="col-format">${fmt}</td>
-            <td class="col-players">${names}</td>
-          </tr>`;
+        try {
+          const json = JSON.parse(await f.text());
+          const raw = Array.isArray(json) ? json : (Array.isArray(json.players) ? json.players : []);
+          incoming = raw.map(normalizePlayer);
+        } catch (e) {
+          alert('Could not parse JSON.'); return;
+        }
       }
-    }).join('');
 
-    const sideLabel = side === 'front' ? 'Front 9' : 'Back 9';
-    return `
-      <div class="sheet side-wrap">
-        <h2>${sideLabel} • ${fmt}</h2>
-        <table class="print">
-          <thead>
-            <tr>
-              <th class="col-num">#</th>
-              <th class="col-format">Format</th>
-              <th class="col-players">Players</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  };
+      if (!incoming.length) { alert('No players found to import.'); return; }
 
-  const dayPage = (day) => {
-    const date = state.dates[day] || '';
-    const dayTitle = (day==='day1' ? 'Day 1' : 'Day 2') + (date ? ` • ${date}` : '');
-    return `
-      <div class="page">
-        <div class="title">${state.eventName}</div>
-        <div class="day-header">${dayTitle}</div>
-        ${sideBlock(day, 'front')}
-        ${sideBlock(day, 'back')}
-      </div>`;
-  };
+      state.players = mergePlayers(state.players || [], incoming);
+      save(); renderAll();
+      alert(`Merged ${incoming.length} players into the roster.`);
+    });
 
-  elPrintContent.innerHTML = css + dayPage('day1') + dayPage('day2');
-}
+    document.getElementById('btnImportState').addEventListener('click', async ()=>{
+      const files = await pickFile('.json');
+      if (!files.length) return;
+      let json;
+      try {
+        json = JSON.parse(await files[0].text());
+      } catch {
+        alert('Invalid JSON file.'); return;
+      }
 
-/* ---- JSON export (unchanged) ---- */
-document.getElementById('btnExport').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'ozark_pairings_twodays.json';
-  a.click();
-});
+      const next = { ...state, ...json };
+
+      if (!Array.isArray(next.players)) next.players = [];
+      next.players = next.players.map(normalizePlayer);
+
+      if (!next.groups || typeof next.groups !== 'object') {
+        next.groups = { day1:{front:[],back:[]}, day2:{front:[],back:[]} };
+      }
+      ['day1','day2'].forEach(day=>{
+        next.groups[day] = next.groups[day] || {front:[],back:[]};
+        next.groups[day].front = Array.isArray(next.groups[day].front) ? next.groups[day].front : [];
+        next.groups[day].back  = Array.isArray(next.groups[day].back ) ? next.groups[day].back  : [];
+      });
+
+      state = next;
+      window.state = state; // re-bridge
+
+      sanitizeGroups();
+      initGroupsIfNeeded();
+      save(); renderAll();
+      alert('State replaced from file.');
+    });
 
     /*********************************
      *  5) UI HYDRATE + RENDER ALL
