@@ -815,38 +815,30 @@
     });
 
     /*********************************
-     *  5) INIT
+     *  5) GLOBAL BRIDGE (must run BEFORE Boot)
      *********************************/
-    function hydrateControls(){
-      document.getElementById('eventName').value = state.eventName||'';
-      document.getElementById('eventDate1').value = state.dates.day1||'';
-      document.getElementById('eventDate2').value = state.dates.day2||'';
-      document.getElementById('numGroups').value = state.numGroups||6;
+    // Ensure autopair.js can see these even if Boot render throws once.
+    window.state      = window.state      || state;
+    window.save       = window.save       || save;
+    window.renderAll  = window.renderAll  || renderAll;
+    window.TEAM_FORMATS     = window.TEAM_FORMATS     || TEAM_FORMATS;
+    window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
+    console.log('[bridge] exposed:', {
+      state: !!window.state, save: !!window.save, renderAll: !!window.renderAll
+    });
 
-      document.querySelectorAll('#dayTabs .tab').forEach(x=>{
-        x.classList.toggle('active', x.dataset.day===state.currentDay);
-      });
-      document.querySelectorAll('#tabs .tab').forEach(x=>{
-        x.classList.toggle('active', x.dataset.side===state.side);
-      });
-
-      elFormat.value = state.format[state.currentDay][state.side] || 'Best Ball';
+    /*********************************
+     *  6) INIT / BOOT (resilient)
+     *********************************/
+    try {
+      load();
+      ensurePlayers();
+      sanitizeGroups();
+      initGroupsIfNeeded();
+      renderAll();
+    } catch (e) {
+      console.error('[boot] initial render failed:', e);
     }
-
-    function renderAll(){
-      hydrateControls();
-      renderTeamFilters();
-      renderPlayers();
-      renderGrid();
-      renderAssignmentsTable();
-    }
-
-    // Boot (sanitize BEFORE first render to prevent forEach crash)
-    load();
-    ensurePlayers();
-    sanitizeGroups();
-    initGroupsIfNeeded();
-    renderAll();
   </script>
 
   <!-- Load autopair AFTER the inline script defines state/renderAll/save -->
