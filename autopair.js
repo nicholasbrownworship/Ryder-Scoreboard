@@ -202,3 +202,20 @@
   window.__autoPair = { autoPairRound, autoPairDay, autoPairAll };
 
 })();
+
+// ---- GLOBAL BRIDGE (must be last in your main JS) ----
+window.state = window.state || state;
+window.renderAll = window.renderAll || renderAll;
+window.save = window.save || save;
+
+window.TEAM_FORMATS = window.TEAM_FORMATS || TEAM_FORMATS;
+window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
+
+// Optional: helpful to verify in console
+console.log('[main] globals exposed:', {
+  hasState: !!window.state,
+  hasRenderAll: !!window.renderAll,
+  hasSave: !!window.save,
+  TEAM_FORMATS: window.TEAM_FORMATS ? [...window.TEAM_FORMATS] : null
+});
+
