@@ -683,32 +683,50 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   window.print();
 });
 
+function ensurePrintOverrides() {
+  // Add a strong, late-loading print override to flatten the grid & let printable span full width.
+  if (document.getElementById('printOverrides')) return;
+  const style = document.createElement('style');
+  style.id = 'printOverrides';
+  style.textContent = `
+    @media print {
+      /* Flatten the 3-col grid so the printable section is full width */
+      .app { display: block !important; padding: 0 !important; }
+      header, .panel:not(.printable) { display: none !important; }
+      .printable {
+        display: block !important;
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #fff !important;
+      }
+      body { background: #fff !important; color: #000 !important; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function buildPrint(){
+  ensurePrintOverrides(); // <-- key: remove the narrow grid constraint while printing
+
   const css = `
     <style>
       @page {
         size: Letter portrait;
-        margin: 0.35in; /* tighter margins so content can breathe */
+        margin: 0.35in; /* comfy but wide */
       }
-
-      /* Nuke any layout constraints/padding from the app when printing this area */
-      .printable { padding: 0 !important; }
-      .page { page-break-after: always; width: 100%; }
-      .page:last-child { page-break-after: auto; }
 
       * { box-sizing: border-box; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-      .title {
-        margin: 0 0 10px 0;
-        font-size: 22px;
-        font-weight: 800;
-      }
-      .day-header {
-        font-size: 16px;
-        font-weight: 700;
-        margin: 0 0 10px 0;
-      }
+      .page { page-break-after: always; width: 100%; }
+      .page:last-child { page-break-after: auto; }
+
+      .title { margin: 0 0 10px 0; font-size: 22px; font-weight: 800; }
+      .day-header { font-size: 16px; font-weight: 700; margin: 0 0 10px 0; }
 
       .sheet {
         border: 1px solid #888;
@@ -719,17 +737,14 @@ function buildPrint(){
         background: #fff;
         width: 100%;
       }
-      .sheet h2 {
-        margin: 0 0 8px 0;
-        font-size: 15px;
-      }
+      .sheet h2 { margin: 0 0 8px 0; font-size: 15px; }
 
-      /* Full-width tables with natural column sizing */
+      /* Full-width tables with flexible columns */
       table.print {
         width: 100%;
         border-collapse: collapse;
-        table-layout: auto;   /* let columns expand to fill the page */
-        font-size: 12px;      /* slightly larger for readability */
+        table-layout: auto;  /* allow content to use full width */
+        font-size: 12px;
       }
       .print th, .print td {
         border: 1px solid #999;
@@ -744,16 +759,15 @@ function buildPrint(){
         font-weight: 700;
       }
 
-      /* Give first two columns *minimums* but allow them to grow as needed */
+      /* Give the first two columns minimums; Players takes remaining width */
       .col-num    { min-width: 36px; text-align: center; }
       .col-format { min-width: 110px; }
-      .col-players{ width: auto; } /* takes the rest */
+      .col-players{ width: auto; }
 
       .muted { color: #555; }
       .match-line { margin: 2px 0; }
       .vs { font-weight: 700; padding: 0 4px; }
 
-      /* Avoid splitting Front/Back sections mid-table */
       .side-wrap { page-break-inside: avoid; }
     </style>`;
 
@@ -844,6 +858,7 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ozark_pairings_twodays.json'; a.click();
 });
+
 
     /*********************************
      *  5) UI HYDRATE + RENDER ALL
