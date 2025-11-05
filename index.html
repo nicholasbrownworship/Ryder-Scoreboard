@@ -632,7 +632,7 @@
 
       const dayBlock = (day)=>{
         const date = state.dates[day] || '';
-        const title = (day==='day1'?'Day 1':'Day 2') + (date ? ` • ${date}` : '');
+        theTitle = (day==='day1'?'Day 1':'Day 2') + (date ? ` • ${date}` : '');
         const sideBlock = (side)=>{
           const fmt = state.format[day][side];
           const isTeam = window.TEAM_FORMATS.has(fmt);
@@ -648,7 +648,7 @@
           }).join('');
           return `<div class="sheet"><h2>${side==='front'?'Front 9':'Back 9'} • ${fmt}</h2><table><thead><tr><th>#</th><th>Format</th><th>Players</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         };
-        return `<div class="sheet"><h2>${title}</h2></div>${sideBlock('front')}${sideBlock('back')}`;
+        return `<div class="sheet"><h2>${theTitle}</h2></div>${sideBlock('front')}${sideBlock('back')}`;
       };
 
       elPrintContent.innerHTML = css +
@@ -794,41 +794,45 @@
       return out;
     }
 
-    document.getElementById('btnImportCSV').addEventListener('click', () => {
-      const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.accept = '.csv,text/csv';
-      inp.onchange = () => {
-        const f = inp.files?.[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-          try {
-            const players = playersFromCSV(String(r.result || ''));
-            if (!players.length) { alert('No players found in CSV.'); return; }
-            mergeIntoPlayers(players);
-            alert(`Imported ${players.length} players from CSV.`);
-          } catch { alert('Could not parse CSV.'); }
-        };
-        r.readAsText(f);
-      };
-      inp.click();
-    });
-
     /*********************************
-     *  5) GLOBAL BRIDGE (must run BEFORE Boot)
+     *  5) UI HYDRATE + RENDER ALL
      *********************************/
-    // Ensure autopair.js can see these even if Boot render throws once.
-    window.state      = window.state      || state;
-    window.save       = window.save       || save;
-    window.renderAll  = window.renderAll  || renderAll;
-    window.TEAM_FORMATS     = window.TEAM_FORMATS     || TEAM_FORMATS;
-    window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
-    console.log('[bridge] exposed:', {
-      state: !!window.state, save: !!window.save, renderAll: !!window.renderAll
-    });
+    function hydrateControls(){
+      document.getElementById('eventName').value = state.eventName||'';
+      document.getElementById('eventDate1').value = state.dates.day1||'';
+      document.getElementById('eventDate2').value = state.dates.day2||'';
+      document.getElementById('numGroups').value = state.numGroups||6;
+
+      document.querySelectorAll('#dayTabs .tab').forEach(x=>{
+        x.classList.toggle('active', x.dataset.day===state.currentDay);
+      });
+      document.querySelectorAll('#tabs .tab').forEach(x=>{
+        x.classList.toggle('active', x.dataset.side===state.side);
+      });
+
+      elFormat.value = state.format[state.currentDay][state.side] || 'Best Ball';
+    }
+
+    function renderAll(){
+      hydrateControls();
+      renderTeamFilters();
+      renderPlayers();
+      renderGrid();
+      renderAssignmentsTable();
+    }
 
     /*********************************
-     *  6) INIT / BOOT (resilient)
+     *  6) GLOBAL BRIDGE (attach AFTER definitions)
+     *********************************/
+    window.state = state;
+    window.save = save;
+    window.renderAll = renderAll;
+    window.TEAM_FORMATS = window.TEAM_FORMATS || new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
+    window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
+    console.log('[bridge] exposed:', { state: !!window.state, save: !!window.save, renderAll: !!window.renderAll });
+
+    /*********************************
+     *  7) INIT / BOOT
      *********************************/
     try {
       load();
