@@ -9,7 +9,28 @@
       --bg:#0b0f0d; --panel:#111617; --muted:#1b2526; --accent:#8bd3dd; --accent-2:#b7e4c7;
       --text:#e7f2f3; --hint:#99a4a6; --danger:#ff6b6b; --ok:#63e6be; --gold:#f1c40f;
       --card:#0f1415; --ink:#0b0f0d; --line:#223033; --shadow:rgba(0,0,0,.35);
-    }
+  
+  --ui-scale: .8; /* 80% */
+}
+
+/* Scale the entire app */
+.app{
+  transform: scale(var(--ui-scale));
+  transform-origin: top left;
+  /* expand the canvas so the scaled UI still fills the screen width */
+  width: calc(100% / var(--ui-scale));
+  height: calc(100% / var(--ui-scale));
+}
+
+/* Never scale the print layout */
+@media print{
+  .app{
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#132022 0%,#0b0f0d 45%,#0b0f0d 100%);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
