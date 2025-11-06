@@ -85,7 +85,7 @@
     header .badge { background: linear-gradient(180deg,#0f1718,#0a0e10); border-color:#2a3b3e; color:#cfe6e8; box-shadow: inset 0 0 0 1px #0a0e10, 0 6px 18px rgba(0,0,0,.35); }
     .list tbody tr:nth-child(odd){ background: linear-gradient(180deg, #0b1112, #0a0f10); }
     .list tbody tr:hover{ background:#101a1b; }
-    .list td:nth-child(3), .list td:nth-child(4), .list td:nth-child(5), .list td:nth-child(6){ text-align:center; font-weight:700; }
+    .list td:nth-child(3), .list td:nth-child(4), .list td:nth-child(5), .list td:nth-child(6), .list td:nth-child(7){ text-align:center; font-weight:700; }
   </style>
 </head>
 <body>
@@ -168,7 +168,7 @@
             </select>
             <button id="btnClearSide" class="btn warn">Clear side</button>
 
-            <!-- Auto-pair controls (wired in autopair.js) -->
+            <!-- Auto-pair controls -->
             <label style="margin-left:10px">Auto-pair:</label>
             <button id="btnAutoPairRound" class="btn">This round</button>
             <button id="btnAutoPairDay" class="btn">Both rounds (this day)</button>
@@ -193,6 +193,7 @@
           <div class="pill" id="pillOnce">Validate: each player used once per side</div>
           <div class="pill" id="pillBalance">Validate: team composition</div>
           <div class="pill" id="pillAutoBalance">Auto-Balance (teams)</div>
+          <div class="pill" id="pillAutoHcp">Auto-Balance (HCP)</div>
         </div>
 
         <div id="alerts"></div>
@@ -201,8 +202,9 @@
           <table>
             <thead>
               <tr>
-                <th style="width:36%">Player</th>
+                <th style="width:34%">Player</th>
                 <th>Team</th>
+                <th>HCP</th>
                 <th>Front D1</th>
                 <th>Back D1</th>
                 <th>Front D2</th>
@@ -254,7 +256,6 @@
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
     function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); if(r){ state = JSON.parse(r); } }catch{} }
 
-    // --- Safety: coerce groups into proper shape BEFORE first render ---
     function sanitizeGroups() {
       if (!state.groups || typeof state.groups !== 'object') {
         state.groups = { day1: { front: [], back: [] }, day2: { front: [], back: [] } };
@@ -284,7 +285,8 @@
           nickname: p.nickname || "",
           team: (p.team||"").toLowerCase().includes("valley")?"valley":"ozark",
           email: p.email||"",
-          phone: p.phone||""
+          phone: p.phone||"",
+          handicap: Number.isFinite(Number(p.handicap)) ? Number(p.handicap) : null
         }));
       }catch{ return [] }
     }
@@ -294,16 +296,18 @@
       const prior = loadPlayersFromPreviousSite();
       if(prior.length){ state.players = prior; return; }
       state.players = [
-        {id:uid(), firstName:"Nick", lastName:"Brown", nickname:"Frenzy", team:"ozark"},
-        {id:uid(), firstName:"Chris", lastName:"B.", nickname:"CB", team:"ozark"},
-        {id:uid(), firstName:"Alex", lastName:"M.", nickname:"", team:"valley"},
-        {id:uid(), firstName:"Jordan", lastName:"S.", nickname:"J-Smooth", team:"valley"}
+        {id:uid(), firstName:"Nick",   lastName:"Brown", nickname:"Frenzy",   team:"ozark",  handicap: 10.2},
+        {id:uid(), firstName:"Chris",  lastName:"B.",    nickname:"CB",       team:"ozark",  handicap: 15.0},
+        {id:uid(), firstName:"Alex",   lastName:"M.",    nickname:"",         team:"valley", handicap: 12.7},
+        {id:uid(), firstName:"Jordan", lastName:"S.",    nickname:"J-Smooth", team:"valley", handicap: 18.4}
       ];
     }
 
-    /* === NEW: normalizer used by merge/imports === */
+    /* === normalizer used by merge/imports (includes handicap) === */
     function normalizePlayer(p){
       const obj = {...p};
+
+      // names
       let first = obj.firstName || obj.First || obj.firstname || "";
       let last  = obj.lastName  || obj.Last  || obj.lastname  || "";
       if ((!first || !last) && obj.name) {
@@ -311,14 +315,32 @@
         first = first || parts[0] || "";
         last  = last  || parts.slice(1).join(" ") || "";
       }
+
+      // nickname
       const nickname = obj.nickname || obj.Nickname || obj.nick || "";
+
+      // team
       let teamRaw = obj.team || obj.Team || "";
       let team = "ozark";
       if (typeof teamRaw === "string" && teamRaw.toLowerCase().includes("val")) team = "valley";
       if (typeof teamRaw === "string" && teamRaw.toLowerCase().includes("oz")) team = "ozark";
+
+      // contact
       const email = obj.email || obj.Email || "";
       const phone = obj.phone || obj.Phone || "";
+
+      // handicap (accepts: handicap, hcp, hi, index)
+      const hRaw =
+        obj.handicap ?? obj.Handicap ?? obj.hcp ?? obj.HCP ?? obj.Hi ?? obj.hi ?? obj.index ?? obj.Index ?? "";
+      let handicap = null;
+      if (hRaw !== null && hRaw !== undefined && String(hRaw).trim() !== "") {
+        const cleaned = String(hRaw).replace(/[^\d.\-]/g, "");
+        const num = Number(cleaned);
+        handicap = Number.isFinite(num) ? num : null;
+      }
+
       const id = obj.id || uid();
+
       return {
         id,
         firstName: String(first||"").trim(),
@@ -326,7 +348,8 @@
         nickname : String(nickname||"").trim(),
         team,
         email,
-        phone
+        phone,
+        handicap
       };
     }
 
@@ -354,7 +377,7 @@
       return `${p.firstName} ${nick}${p.lastName}`.replace(/\s+/g,' ').trim();
     }
 
-    /* NEW: remove player helper (cleans from all groups + roster) */
+    /* remove player helper (cleans from all groups + roster) */
     function removePlayerEverywhere(playerId){
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
@@ -371,7 +394,6 @@
       renderAll();
     }
 
-    /* Merge helper (now uses normalizePlayer) */
     function mergePlayers(existing, incoming){
       const byKey = x=> (x.firstName+'|'+x.lastName+'|'+(x.email||'')).toLowerCase();
       const map = new Map((existing||[]).map(p=>[byKey(p), p]));
@@ -383,7 +405,6 @@
       return Array.from(map.values());
     }
 
-    /* UPDATED: renderPlayers includes delete */
     function renderPlayers(){
       const q = (state.filters.q||'').toLowerCase();
       const team = state.filters.team;
@@ -401,11 +422,13 @@
           card.draggable = true;
           card.dataset.id = p.id;
 
+          const hcpStr = (p.handicap!==null && p.handicap!==undefined) ? ` • HCP ${p.handicap}` : ``;
+
           card.innerHTML = `
             <div class="dot ${p.team}" style="background:${TEAM_COLORS[p.team]}"></div>
             <div>
               <div>${playerDisplayName(p)}</div>
-              <div class="meta">${TEAM_LABELS[p.team]}</div>
+              <div class="meta">${TEAM_LABELS[p.team]}${hcpStr}</div>
             </div>
             <button class="btn warn btnDel" title="Remove player"
               style="margin-left:auto;font-size:11px;line-height:1;padding:4px 8px;border-radius:8px">×</button>
@@ -442,7 +465,12 @@
       const lastName = prompt('Last name?')||'';
       const nickname = prompt('Nickname (optional)')||'';
       const team = (prompt('Team: ozark / valley','ozark')||'ozark').toLowerCase().includes('val')?'valley':'ozark';
-      state.players.push({id:uid(), firstName, lastName, nickname, team}); save(); renderAll();
+      const hStr = prompt('Handicap (e.g., 12.4). Leave blank if unknown:') || '';
+      const hNum = Number(String(hStr).replace(/[^\d.\-]/g,''));
+      const handicap = Number.isFinite(hNum) ? hNum : null;
+
+      state.players.push({id:uid(), firstName, lastName, nickname, team, handicap});
+      save(); renderAll();
     });
 
     /*********************************
@@ -534,7 +562,11 @@
       s.dataset.side = side;
       s.dataset.group = groupIndex;
       s.dataset.pos = pos;
-      s.textContent = playerId ? playerDisplayName(findPlayer(playerId)) : 'Drop player here';
+
+      const p = playerId ? findPlayer(playerId) : null;
+      const hcp = p && (p.handicap!==null && p.handicap!==undefined) ? ` • HCP ${p.handicap}` : '';
+      s.textContent = playerId ? (playerDisplayName(p) + hcp) : 'Drop player here';
+
       s.addEventListener('dragover', e=>{ e.preventDefault(); s.classList.add('dragover'); });
       s.addEventListener('dragleave', ()=> s.classList.remove('dragover'));
       s.addEventListener('drop', e=> onDropToSlot(e, s));
@@ -636,6 +668,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML =
           `<td>${playerDisplayName(p)}</td><td>${TEAM_LABELS[p.team]}</td>`+
+          `<td>${(p.handicap!==null && p.handicap!==undefined) ? p.handicap : ''}</td>`+
           `<td>${used.day1.front.get(p.id)||''}</td>`+
           `<td>${used.day1.back.get(p.id)||''}</td>`+
           `<td>${used.day2.front.get(p.id)||''}</td>`+
@@ -668,7 +701,6 @@
                 else if(!(oz===2 && va===2)) problems.push(`${printSide(day,side)} Group ${i+1}: must be 2 OZ + 2 VA (now ${oz}/${va})`);
               }
             }else{
-              // Singles = two 1v1 matches: (0 vs 1) and (2 vs 3)
               const pairIdx = [[0,1],[2,3]];
               pairIdx.forEach((pair, pi)=>{
                 const ids = pair.map(pos => (Array.isArray(g)?g[pos]:null)).filter(Boolean);
@@ -700,24 +732,21 @@
     document.getElementById('pillBalance').addEventListener('click', ()=> alert('Team events require 2v2 (2 Ozark + 2 Valley). Singles requires 1v1.'));
 
     /*********************************
-     *  4) PRINT / EXPORT (robust reset)
+     *  4) PRINT / EXPORT
      *********************************/
     const elPrintArea = document.getElementById('printArea');
     const elPrintContent = document.getElementById('printContent');
 
-    // Make sure the print area can never block clicks when not printing
     elPrintArea.style.pointerEvents = 'none';
 
     document.getElementById('btnPrint').addEventListener('click', () => {
       ensurePrintOverrides();
       buildPrintPages();
 
-      // Enter print mode
       document.documentElement.setAttribute('data-printing', '1');
       elPrintArea.style.display = 'block';
       elPrintArea.style.pointerEvents = 'auto';
 
-      // Robust endPrint with multiple fallbacks
       const endOnce = (() => {
         let done = false;
         return () => {
@@ -729,7 +758,7 @@
           elPrintContent.innerHTML = '';
           window.removeEventListener('afterprint', endOnce);
           if (mm && mm.removeEventListener) mm.removeEventListener('change', onMM);
-          if (mm && mm.removeListener) mm.removeListener(onMM); // older Safari
+          if (mm && mm.removeListener) mm.removeListener(onMM);
           window.removeEventListener('focus', onFocus);
         };
       })();
@@ -740,17 +769,14 @@
       window.addEventListener('afterprint', endOnce, { once: true });
       const mm = window.matchMedia && window.matchMedia('print');
       if (mm && mm.addEventListener) mm.addEventListener('change', onMM);
-      else if (mm && mm.addListener) mm.addListener(onMM); // older Safari
+      else if (mm && mm.addListener) mm.addListener(onMM);
       window.addEventListener('focus', onFocus, { once: true });
 
-      // Absolute last-resort cleanup if none of the above fire
       setTimeout(endOnce, 8000);
 
-      // Trigger the print dialog
       window.print();
     });
 
-    /* ---- One-time print CSS (scoped to data-printing) ---- */
     function ensurePrintOverrides(){
       if (document.getElementById('printOverridesScoped')) return;
       const style = document.createElement('style');
@@ -770,7 +796,6 @@
       document.head.appendChild(style);
     }
 
-    /* ---- Full-width, two-page print (Day 1 / Day 2) ---- */
     function buildPrintPages(){
       const css = `
         <style>
@@ -808,7 +833,9 @@
       const mkNameTag = (pid) => {
         if (!pid) return '';
         const p = findPlayer(pid);
-        return p ? `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'})</span>` : '';
+        if (!p) return '';
+        const h = (p.handicap!==null && p.handicap!==undefined) ? `, HCP ${p.handicap}` : '';
+        return `${playerDisplayName(p)} <span class="muted">(${p.team==='ozark'?'OZ':'VA'}${h})</span>`;
       };
 
       const sideBlock = (day, side) => {
@@ -831,7 +858,6 @@
                 </td>
               </tr>`;
           } else {
-            // Singles -> two 1v1 matches: (0 vs 1) and (2 vs 3)
             const a1 = mkNameTag(g[0]), b1 = mkNameTag(g[1]);
             const a2 = mkNameTag(g[2]), b2 = mkNameTag(g[3]);
             const line1 = (a1 || b1) ? `<div class="match-line">Match 1: ${a1 || '&nbsp;'} <span class="vs">vs</span> ${b1 || '&nbsp;'}</div>` : '';
@@ -888,7 +914,7 @@
     });
 
     /*********************************
-     *  8) IMPORTS (CSV)
+     *  8) IMPORTS (CSV) — supports handicap
      *********************************/
     function pickFile(accept, multiple=false){
       return new Promise((resolve)=>{
@@ -959,7 +985,8 @@
           team     : map.team      || '',
           email    : map.email     || '',
           phone    : map.phone     || '',
-          name     : map.name      || ''
+          name     : map.name      || '',
+          handicap : map.handicap || map.hcp || map.hi || map.index || ''
         };
         return normalizePlayer(candidate);
       });
@@ -972,7 +999,6 @@
     /*********************************
      *  Shuffle / Auto-balance / Reset
      *********************************/
-    function clone(o){ return JSON.parse(JSON.stringify(o)); }
     function randShuffle(arr){
       const a = arr.slice();
       for(let i=a.length-1;i>0;i--){
@@ -982,14 +1008,12 @@
       return a;
     }
 
-    // --- Shuffle All: ONLY moves players already placed; empties stay empty ---
     function shuffleAll(){
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
           const groups = state.groups?.[day]?.[side];
           if (!Array.isArray(groups) || !groups.length) return;
 
-          // gather filled coordinates and their player IDs
           const coords = [];
           const ids = [];
           groups.forEach((g, gi)=>{
@@ -998,7 +1022,7 @@
             });
           });
 
-          if (ids.length < 2) return; // nothing meaningful to shuffle
+          if (ids.length < 2) return;
 
           const shuffled = randShuffle(ids);
           coords.forEach((c, i)=>{
@@ -1081,6 +1105,105 @@
       save(); renderAll();
     }
 
+    // Handicap-aware helpers + balancer
+    const getHcp = (pid) => {
+      const p = findPlayer(pid);
+      return (p && Number.isFinite(p.handicap)) ? p.handicap : null;
+    };
+    function sumHcp(ids){
+      let s = 0; (ids||[]).forEach(id=>{ const h = getHcp(id); if (h !== null) s += h; });
+      return s;
+    }
+    function groupTeamDiff(g){
+      const a = sumHcp([g[0], g[1]]);
+      const b = sumHcp([g[2], g[3]]);
+      return Math.abs(a - b);
+    }
+    function groupSinglesScore(g){
+      const pairs = [[0,1],[2,3]];
+      let score = 0;
+      pairs.forEach(([i,j])=>{
+        const hi = getHcp(g[i]); const hj = getHcp(g[j]);
+        if (hi === null || hj === null) return;
+        score += Math.abs(hi - hj);
+      });
+      return score;
+    }
+
+    function autoBalanceByHandicap(){
+      ['day1','day2'].forEach(day=>{
+        ['front','back'].forEach(side=>{
+          const fmt = state.format[day][side];
+          const isTeam = window.TEAM_FORMATS.has(fmt);
+          const groups = state.groups?.[day]?.[side] || [];
+          if (!groups.length) return;
+
+          for (let pass=0; pass<8; pass++){
+            let improved = false;
+
+            for (let g1 = 0; g1 < groups.length; g1++){
+              for (let g2 = g1+1; g2 < groups.length; g2++){
+                const A = groups[g1], B = groups[g2];
+                if (!Array.isArray(A) || !Array.isArray(B)) continue;
+
+                if (isTeam){
+                  const base = groupTeamDiff(A) + groupTeamDiff(B);
+                  for (let i=0; i<A.length; i++){
+                    if (!A[i]) continue;
+                    for (let j=0; j<B.length; j++){
+                      if (!B[j]) continue;
+
+                      [A[i], B[j]] = [B[j], A[i]]; // simulate
+
+                      const okTeams = (() => {
+                        const count = (g, t) => g.filter(Boolean).map(findPlayer).filter(p=>p && p.team===t).length;
+                        const ozA = count(A,'ozark'), vaA = count(A,'valley');
+                        const ozB = count(B,'ozark'), vaB = count(B,'valley');
+                        return (ozA<=2 && vaA<=2 && ozB<=2 && vaB<=2);
+                      })();
+
+                      const score = okTeams ? (groupTeamDiff(A)+groupTeamDiff(B)) : Infinity;
+
+                      if (score < base){ improved = true; }
+                      else { [A[i], B[j]] = [B[j], A[i]]; } // undo
+                    }
+                  }
+                } else {
+                  const base = groupSinglesScore(A) + groupSinglesScore(B);
+
+                  const pairSideOk = (g, idx) => {
+                    const mate = (idx%2===0) ? idx+1 : idx-1;
+                    const a = g[idx], b = g[mate];
+                    if (!a || !b) return true;
+                    const pa = findPlayer(a), pb = findPlayer(b);
+                    return (pa && pb) ? (pa.team !== pb.team) : true;
+                  };
+
+                  for (let i=0; i<A.length; i++){
+                    if (!A[i]) continue;
+                    for (let j=0; j<B.length; j++){
+                      if (!B[j]) continue;
+
+                      [A[i], B[j]] = [B[j], A[i]]; // simulate
+                      const okPairs = pairSideOk(A, i) && pairSideOk(B, j);
+                      const score = okPairs ? (groupSinglesScore(A)+groupSinglesScore(B)) : Infinity;
+
+                      if (score < base){ improved = true; }
+                      else { [A[i], B[j]] = [B[j], A[i]]; } // undo
+                    }
+                  }
+                }
+              }
+            }
+            if (!improved) break;
+          }
+        });
+      });
+
+      save();
+      renderAll();
+    }
+
     // Buttons
     document.getElementById('btnShuffle').addEventListener('click', ()=>{
       if(!confirm('Shuffle all currently filled slots across Day 1 & Day 2? (Empty slots will stay empty.)')) return;
@@ -1092,13 +1215,16 @@
       autoBalanceAll();
     });
 
+    document.getElementById('pillAutoHcp').addEventListener('click', ()=>{
+      if(!confirm('Auto-balance by handicap across all groups (keeps OZ vs VA rules)?')) return;
+      autoBalanceByHandicap();
+    });
+
     document.getElementById('btnResetAll').addEventListener('click', ()=>{
       if(!confirm('Reset ALL players and pairings? This removes the entire roster and clears Day 1 & Day 2.')) return;
 
-      // wipe roster
       state.players = [];
 
-      // wipe groups
       ['day1','day2'].forEach(day=>{
         ['front','back'].forEach(side=>{
           const gs = desiredGroupSize(state.format[day][side]);
@@ -1144,14 +1270,13 @@
     }
 
     /*********************************
-     *  6) GLOBAL BRIDGE (attach AFTER definitions)
+     *  6) GLOBAL BRIDGE
      *********************************/
     window.state = state;
     window.save = save;
     window.renderAll = renderAll;
     window.TEAM_FORMATS = window.TEAM_FORMATS || new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
     window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
-    console.log('[bridge] exposed:', { state: !!window.state, save: !!window.save, renderAll: !!window.renderAll });
 
     /*********************************
      *  7) INIT / BOOT
@@ -1160,7 +1285,7 @@
       load();
       ensurePlayers();
       sanitizeGroups();
-      initGroupsIfNeeded();
+      (function initGroups(){ ['day1','day2'].forEach(d=>['front','back'].forEach(s=>{ if(!Array.isArray(state.groups[d][s])) state.groups[d][s]=[]; })); })();
       renderAll();
     } catch (e) {
       console.error('[boot] initial render failed:', e);
