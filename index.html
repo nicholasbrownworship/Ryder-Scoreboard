@@ -231,7 +231,7 @@
     const STORAGE_KEY = "ozarkPairings_v3_twoDays";
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
-    window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']); // expose for autopair.js
+    window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Scramble']); // expose for autopair.js
 
     // State now includes two days
     let state = {
@@ -1275,7 +1275,7 @@
     window.state = state;
     window.save = save;
     window.renderAll = renderAll;
-    window.TEAM_FORMATS = window.TEAM_FORMATS || new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
+    window.TEAM_FORMATS = window.TEAM_FORMATS || new Set(['Best Ball','Scramble','Alt Shot','Scramble']);
     window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
 
     /*********************************
