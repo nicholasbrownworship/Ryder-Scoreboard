@@ -9,32 +9,21 @@
       --bg:#0b0f0d; --panel:#111617; --muted:#1b2526; --accent:#8bd3dd; --accent-2:#b7e4c7;
       --text:#e7f2f3; --hint:#99a4a6; --danger:#ff6b6b; --ok:#63e6be; --gold:#f1c40f;
       --card:#0f1415; --ink:#0b0f0d; --line:#223033; --shadow:rgba(0,0,0,.35);
-  
-  --ui-scale: .8; /* 80% */
-}
-
-/* Scale the entire app */
-.app{
-  transform: scale(var(--ui-scale));
-  transform-origin: top left;
-  /* expand the canvas so the scaled UI still fills the screen width */
-  width: calc(100% / var(--ui-scale));
-  height: calc(100% / var(--ui-scale));
-}
-
-/* Never scale the print layout */
-@media print{
-  .app{
-    transform: none !important;
-    width: 100% !important;
-    height: auto !important;
-  }
-}
-
+      --ui-scale:.8; /* 80% on-screen scale */
+    }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#132022 0%,#0b0f0d 45%,#0b0f0d 100%);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    .app{display:grid;grid-template-columns:320px 1fr 420px;gap:16px;height:100%;padding:16px}
+
+    /* Scale entire app for on-screen fit; keep print at 100% */
+    .app{display:grid;grid-template-columns:320px 1fr 420px;gap:16px;height:100%;padding:16px;
+      transform:scale(var(--ui-scale)); transform-origin:top left;
+      width:calc(100%/var(--ui-scale)); height:calc(100%/var(--ui-scale));
+    }
+    @media print{
+      .app{transform:none!important;width:100%!important;height:auto!important;padding:0!important}
+    }
+
     header{grid-column:1/-1;background:linear-gradient(180deg,#0e1516,#0a0e0f);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:0 6px 20px var(--shadow);display:flex;align-items:center;gap:12px}
     h1{margin:0;font-size:20px;letter-spacing:.3px}
     .badge{padding:.2rem .5rem;border:1px solid var(--line);border-radius:999px;color:var(--accent-2);font-size:12px}
@@ -106,15 +95,26 @@
     header .badge { background: linear-gradient(180deg,#0f1718,#0a0e10); border-color:#2a3b3e; color:#cfe6e8; box-shadow: inset 0 0 0 1px #0a0e10, 0 6px 18px rgba(0,0,0,.35); }
     .list tbody tr:nth-child(odd){ background: linear-gradient(180deg, #0b1112, #0a0f10); }
     .list tbody tr:hover{ background:#101a1b; }
-    .list td:nth-child(3), .list td:nth-child(4), .list td:nth-child(5), .list td:nth-child(6), .list td:nth-child(7){ text-align:center; font-weight:700; }
+    .list td:nth-child(3), .list td:nth-child(4), .list td:nth-child(5), .list td:nth-child(6){ text-align:center; font-weight:700; }
 
-    /* Result buttons (scoreboard helpers) */
+    /* Scoreboard / results UI */
     .resultbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
     .rbtn{border:1px solid var(--line);background:#101718;color:#bfe7ea;padding:4px 8px;border-radius:999px;font-size:12px;cursor:pointer}
     .rbtn:hover{filter:brightness(1.08)}
     .rbtn.active{background:#17393d;border-color:#2a6f77;color:#dcffff}
     .rlabel{font-size:12px;color:#a7b1b2;margin-right:4px}
     .sep{height:1px;background:#223033;opacity:.5;margin:6px 0}
+    #winnerBadge{
+      background: linear-gradient(180deg,#17393d,#102526);
+      border: 1px solid #2a6f77;
+      padding: 6px 10px;
+      border-radius: 10px;
+      display: none;
+      margin-top: 6px;
+      font-weight: 700;
+      color: #c9fbff;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -219,9 +219,9 @@
       <div class="head"><h2>Leaderboard &amp; Schedule</h2></div>
       <div class="body">
         <!-- SCOREBOARD -->
-        <div id="scoreboard" class="card" style="display:flex;align-items:center;gap:14px;justify-content:space-between">
+        <div id="scoreboard" class="card" style="display:flex;align-items:center;gap:14px;justify-content:space-between;flex-direction:column;align-items:stretch">
           <div style="font-weight:700">Scoreboard</div>
-          <div style="display:flex;gap:16px;align-items:center">
+          <div style="display:flex;gap:16px;align-items:center;justify-content:space-between">
             <div style="display:flex;gap:6px;align-items:center">
               <span class="swatch" style="background:#2ecc71"></span>
               <span>Team Ozark:</span>
@@ -233,6 +233,7 @@
               <strong id="scoreValley">0</strong>
             </div>
           </div>
+          <div id="winnerBadge"></div>
         </div>
 
         <div class="row" style="margin-top:8px">
@@ -277,6 +278,7 @@
     const STORAGE_KEY = "ozarkPairings_v3_twoDays";
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
+    const WIN_THRESHOLD = 15.5; // clinch threshold for 24-player format
     window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']); // expose for autopair.js
 
     let state = {
@@ -294,12 +296,13 @@
         day1: { front: [], back: [] },
         day2: { front: [], back: [] }
       },
-      // NEW: results
+      // results: team -> "ozark"/"valley"/"tie"/null; singles -> [res1,res2]
       results: {
         day1: { front: [], back: [] },
         day2: { front: [], back: [] }
       },
-      numGroups: 6
+      numGroups: 6,
+      winAnnounced: null
     };
 
     function uid(){ return Math.random().toString(36).slice(2,9) }
@@ -1315,6 +1318,7 @@
           back : Array.from({length: state.numGroups}, ()=> window.TEAM_FORMATS.has(state.format.day2.back ) ? null : [null,null]) 
         }
       };
+      state.winAnnounced = null;
 
       save(); renderAll();
 
@@ -1426,6 +1430,38 @@
       const elVa = document.getElementById('scoreValley');
       if (elOz) elOz.textContent = (Math.round(s.ozark*10)/10).toString();
       if (elVa) elVa.textContent = (Math.round(s.valley*10)/10).toString();
+
+      const badge = document.getElementById('winnerBadge');
+      if (!badge) return;
+
+      // Determine if someone has clinched (>= 15.5)
+      const ozClinch = s.ozark >= WIN_THRESHOLD;
+      const vaClinch = s.valley >= WIN_THRESHOLD;
+
+      // If both exceed simultaneously, show leader (or tie if equal)
+      let winner = null;
+      if (ozClinch || vaClinch) {
+        if (s.ozark > s.valley) winner = 'ozark';
+        else if (s.valley > s.ozark) winner = 'valley';
+        else winner = 'tie';
+      }
+
+      if (winner && winner !== 'tie') {
+        badge.style.display = 'block';
+        badge.textContent = `${TEAM_LABELS[winner]} has clinched at ${Math.max(s.ozark, s.valley)} points!`;
+        if (state.winAnnounced !== winner) {
+          alert(`${TEAM_LABELS[winner]} clinches the match at ${Math.max(s.ozark, s.valley)} points!`);
+          state.winAnnounced = winner;
+          save();
+        }
+      } else if (winner === 'tie') {
+        badge.style.display = 'block';
+        badge.textContent = `Tie at ${s.ozark}–${s.valley}. Continue until someone leads.`;
+        if (state.winAnnounced !== null) { state.winAnnounced = null; save(); }
+      } else {
+        badge.style.display = 'none';
+        if (state.winAnnounced !== null) { state.winAnnounced = null; save(); }
+      }
     }
 
     /*********************************
