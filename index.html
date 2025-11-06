@@ -86,6 +86,14 @@
     .list tbody tr:nth-child(odd){ background: linear-gradient(180deg, #0b1112, #0a0f10); }
     .list tbody tr:hover{ background:#101a1b; }
     .list td:nth-child(3), .list td:nth-child(4), .list td:nth-child(5), .list td:nth-child(6), .list td:nth-child(7){ text-align:center; font-weight:700; }
+
+    /* Result buttons (scoreboard helpers) */
+    .resultbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+    .rbtn{border:1px solid var(--line);background:#101718;color:#bfe7ea;padding:4px 8px;border-radius:999px;font-size:12px;cursor:pointer}
+    .rbtn:hover{filter:brightness(1.08)}
+    .rbtn.active{background:#17393d;border-color:#2a6f77;color:#dcffff}
+    .rlabel{font-size:12px;color:#a7b1b2;margin-right:4px}
+    .sep{height:1px;background:#223033;opacity:.5;margin:6px 0}
   </style>
 </head>
 <body>
@@ -168,7 +176,7 @@
             </select>
             <button id="btnClearSide" class="btn warn">Clear side</button>
 
-            <!-- Auto-pair controls -->
+            <!-- Auto-pair controls (wired in autopair.js) -->
             <label style="margin-left:10px">Auto-pair:</label>
             <button id="btnAutoPairRound" class="btn">This round</button>
             <button id="btnAutoPairDay" class="btn">Both rounds (this day)</button>
@@ -189,14 +197,31 @@
     <aside class="panel side">
       <div class="head"><h2>Leaderboard &amp; Schedule</h2></div>
       <div class="body">
-        <div class="row">
+        <!-- SCOREBOARD -->
+        <div id="scoreboard" class="card" style="display:flex;align-items:center;gap:14px;justify-content:space-between">
+          <div style="font-weight:700">Scoreboard</div>
+          <div style="display:flex;gap:16px;align-items:center">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="swatch" style="background:#2ecc71"></span>
+              <span>Team Ozark:</span>
+              <strong id="scoreOzark">0</strong>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="swatch" style="background:#3498db"></span>
+              <span>Team Valley:</span>
+              <strong id="scoreValley">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:8px">
           <div class="pill" id="pillOnce">Validate: each player used once per side</div>
           <div class="pill" id="pillBalance">Validate: team composition</div>
           <div class="pill" id="pillAutoBalance">Auto-Balance (teams)</div>
           <div class="pill" id="pillAutoHcp">Auto-Balance (HCP)</div>
         </div>
 
-        <div id="alerts"></div>
+        <div id="alerts" style="margin-top:8px"></div>
 
         <div class="list" aria-label="Assignments table">
           <table>
@@ -231,9 +256,8 @@
     const STORAGE_KEY = "ozarkPairings_v3_twoDays";
     const TEAM_LABELS = { ozark: "Team Ozark", valley: "Team Valley" };
     const TEAM_COLORS = { ozark: "#2ecc71", valley: "#3498db" };
-    window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Scramble']); // expose for autopair.js
+    window.TEAM_FORMATS = new Set(['Best Ball','Scramble','Alt Shot','Shamble']); // expose for autopair.js
 
-    // State now includes two days
     let state = {
       players: [],
       filters: { team: "all", q: "" },
@@ -246,6 +270,11 @@
         day2: { front: "Alt Shot",  back: "Singles"  }
       },
       groups: {
+        day1: { front: [], back: [] },
+        day2: { front: [], back: [] }
+      },
+      // NEW: results
+      results: {
         day1: { front: [], back: [] },
         day2: { front: [], back: [] }
       },
@@ -267,6 +296,9 @@
           if (!Array.isArray(state.groups[day][side])) state.groups[day][side] = [];
         });
       });
+      if (!state.results || typeof state.results !== 'object') {
+        state.results = { day1:{front:[],back:[]}, day2:{front:[],back:[]} };
+      }
     }
 
     // Always 4 slots per group so Singles can show two 1v1 matches
@@ -495,6 +527,19 @@
             while (arr.length < gs) arr.push(null);
             return arr;
           });
+
+          // --- keep results in sync with groups & format ---
+          if(!state.results) state.results = {day1:{front:[],back:[]}, day2:{front:[],back:[]}};
+          if(!Array.isArray(state.results[day][side])) state.results[day][side] = [];
+          while(state.results[day][side].length < state.numGroups) state.results[day][side].push(null);
+          state.results[day][side] = state.results[day][side].slice(0, state.numGroups);
+
+          state.results[day][side] = state.results[day][side].map((r)=>{
+            const isTeam = window.TEAM_FORMATS.has(fmt);
+            if (isTeam) return (typeof r === 'string' || r===null) ? r : null;
+            // singles -> [null,null] shape
+            return Array.isArray(r) ? [r[0] ?? null, r[1] ?? null] : [null, null];
+          });
         });
       });
     }
@@ -550,6 +595,7 @@
         }
 
         card.appendChild(slotsWrap);
+        card.appendChild(buildResultControls(day, side, idx, isTeam));
         elGrid.appendChild(card);
       });
       elFormat.value = fmt;
@@ -632,6 +678,8 @@
           while (a.length < gs) a.push(null);
           return a;
         });
+      // keep results in sync after format change
+      initGroupsIfNeeded();
       save(); renderAll();
     });
 
@@ -640,6 +688,9 @@
       if(confirm(`Clear all groups on ${day==='day1'?'Day 1':'Day 2'} ${side==='front'?'Front 9':'Back 9'}?`)){
         const gs = desiredGroupSize(state.format[day][side]);
         state.groups[day][side] = Array.from({length: state.numGroups}, ()=> Array(gs).fill(null));
+        // clear results on this side
+        const isTeam = window.TEAM_FORMATS.has(state.format[day][side]);
+        state.results[day][side] = Array.from({length: state.numGroups}, ()=> isTeam ? null : [null,null]);
         save(); renderAll();
       }
     });
@@ -1232,6 +1283,18 @@
         });
       });
 
+      // wipe results too
+      state.results = {
+        day1: { 
+          front: Array.from({length: state.numGroups}, ()=> window.TEAM_FORMATS.has(state.format.day1.front) ? null : [null,null]),
+          back : Array.from({length: state.numGroups}, ()=> window.TEAM_FORMATS.has(state.format.day1.back ) ? null : [null,null]) 
+        },
+        day2: { 
+          front: Array.from({length: state.numGroups}, ()=> window.TEAM_FORMATS.has(state.format.day2.front) ? null : [null,null]),
+          back : Array.from({length: state.numGroups}, ()=> window.TEAM_FORMATS.has(state.format.day2.back ) ? null : [null,null]) 
+        }
+      };
+
       save(); renderAll();
 
       if(confirm('Also clear the previous-site signups cache? (This is the "'+SIGNUPS_KEY+'" localStorage key.)')){
@@ -1241,6 +1304,108 @@
         alert('Roster and pairings cleared.');
       }
     });
+
+    /*********************************
+     *  SCOREBOARD + RESULT CONTROLS
+     *********************************/
+    const TEAM_TO_LABEL = { ozark: TEAM_LABELS.ozark, valley: TEAM_LABELS.valley };
+    const POINTS = { teamMatch: 1, singlesMatch: 1 };
+
+    function buildResultControls(day, side, groupIndex, isTeam){
+      const wrap = document.createElement('div');
+      wrap.className = 'resultbar';
+
+      if (isTeam){
+        const label = document.createElement('span');
+        label.className = 'rlabel';
+        label.textContent = 'Result (Team):';
+        wrap.appendChild(label);
+
+        ['ozark','tie','valley'].forEach(key=>{
+          const btn = document.createElement('button');
+          btn.className = 'rbtn';
+          btn.textContent = (key==='tie' ? 'Tie' : TEAM_TO_LABEL[key]);
+          if (state.results[day][side][groupIndex] === key) btn.classList.add('active');
+          btn.addEventListener('click', ()=>{
+            state.results[day][side][groupIndex] = (state.results[day][side][groupIndex]===key ? null : key);
+            save(); renderScoreboard(); renderGrid();
+          });
+          wrap.appendChild(btn);
+        });
+
+      } else {
+        const mkRow = (matchIdx)=>{
+          const row = document.createElement('div');
+          row.className = 'resultbar';
+          const lab = document.createElement('span');
+          lab.className = 'rlabel';
+          lab.textContent = `Match ${matchIdx+1}:`;
+          row.appendChild(lab);
+
+          ['ozark','tie','valley'].forEach(key=>{
+            const btn = document.createElement('button');
+            btn.className = 'rbtn';
+            const cur = state.results[day][side][groupIndex] || [null,null];
+            if (cur[matchIdx] === key) btn.classList.add('active');
+            btn.textContent = (key==='tie' ? 'Tie' : TEAM_TO_LABEL[key]);
+            btn.addEventListener('click', ()=>{
+              const arr = state.results[day][side][groupIndex] || [null,null];
+              arr[matchIdx] = (arr[matchIdx]===key ? null : key);
+              state.results[day][side][groupIndex] = arr;
+              save(); renderScoreboard(); renderGrid();
+            });
+            row.appendChild(btn);
+          });
+
+          return row;
+        };
+
+        const topSep = document.createElement('div');
+        topSep.className = 'sep';
+        wrap.appendChild(topSep);
+
+        wrap.appendChild(mkRow(0));
+        wrap.appendChild(mkRow(1));
+      }
+
+      return wrap;
+    }
+
+    function tallyPoints(){
+      let oz = 0, va = 0;
+
+      ['day1','day2'].forEach(day=>{
+        ['front','back'].forEach(side=>{
+          const fmt = state.format[day][side];
+          const isTeam = window.TEAM_FORMATS.has(fmt);
+          const rs = state.results?.[day]?.[side] || [];
+          rs.forEach(r=>{
+            if (isTeam){
+              if (r === 'ozark') oz += POINTS.teamMatch;
+              else if (r === 'valley') va += POINTS.teamMatch;
+              else if (r === 'tie') { oz += POINTS.teamMatch/2; va += POINTS.teamMatch/2; }
+            } else {
+              const arr = Array.isArray(r) ? r : [null,null];
+              arr.forEach(x=>{
+                if (x === 'ozark') oz += POINTS.singlesMatch;
+                else if (x === 'valley') va += POINTS.singlesMatch;
+                else if (x === 'tie') { oz += POINTS.singlesMatch/2; va += POINTS.singlesMatch/2; }
+              });
+            }
+          });
+        });
+      });
+
+      return { ozark: oz, valley: va };
+    }
+
+    function renderScoreboard(){
+      const s = tallyPoints();
+      const elOz = document.getElementById('scoreOzark');
+      const elVa = document.getElementById('scoreValley');
+      if (elOz) elOz.textContent = (Math.round(s.ozark*10)/10).toString();
+      if (elVa) elVa.textContent = (Math.round(s.valley*10)/10).toString();
+    }
 
     /*********************************
      *  5) UI HYDRATE + RENDER ALL
@@ -1267,6 +1432,7 @@
       renderPlayers();
       renderGrid();
       renderAssignmentsTable();
+      renderScoreboard();
     }
 
     /*********************************
@@ -1275,7 +1441,7 @@
     window.state = state;
     window.save = save;
     window.renderAll = renderAll;
-    window.TEAM_FORMATS = window.TEAM_FORMATS || new Set(['Best Ball','Scramble','Alt Shot','Scramble']);
+    window.TEAM_FORMATS = window.TEAM_FORMATS || new Set(['Best Ball','Scramble','Alt Shot','Shamble']);
     window.desiredGroupSize = window.desiredGroupSize || desiredGroupSize;
 
     /*********************************
@@ -1285,7 +1451,7 @@
       load();
       ensurePlayers();
       sanitizeGroups();
-      (function initGroups(){ ['day1','day2'].forEach(d=>['front','back'].forEach(s=>{ if(!Array.isArray(state.groups[d][s])) state.groups[d][s]=[]; })); })();
+      initGroupsIfNeeded();
       renderAll();
     } catch (e) {
       console.error('[boot] initial render failed:', e);
